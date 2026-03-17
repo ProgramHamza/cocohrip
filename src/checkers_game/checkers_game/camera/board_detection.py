@@ -2,6 +2,7 @@ import cv2
 from matplotlib.pyplot import imshow
 from .ximea_camera import XimeaCamera
 from .grid_corner_detector import GridCornerDetector
+from .old_board_better import OldBoardBetterDetector
 import numpy as np
 import copy
 from ..checkers.piece import Piece
@@ -12,6 +13,7 @@ class BoardDetection:
     def __init__(self, ximeaCamera):
         self.ximeaCamera = ximeaCamera
         self.grid_detector = GridCornerDetector()
+        self.old_board_detector = OldBoardBetterDetector()
         self._init()
         
 
@@ -56,6 +58,9 @@ class BoardDetection:
         """
         # Get image
         image = self.ximeaCamera.get_camera_image()
+        return self._auto_detect_corners_from_image(image)
+
+    def _auto_detect_corners_from_image(self, image):
         if image is None:
             return None
 
@@ -64,6 +69,16 @@ class BoardDetection:
         if grid_result is not None:
             print("  → Grid-based detection succeeded")
             return self._orient_corners(grid_result.corners, image)
+
+        # Second try old-board-better low-light robust detector
+        old_corners, _old_debug = self.old_board_detector.detect_corners_debug(image)
+        if old_corners is not None:
+            print("  → OldBoardBetter detection succeeded")
+            return self._orient_corners(old_corners, image)
+
+        return self._auto_detect_corners_contour_fallback(image)
+
+    def _auto_detect_corners_contour_fallback(self, image):
         
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
