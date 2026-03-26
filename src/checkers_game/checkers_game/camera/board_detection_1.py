@@ -5,6 +5,8 @@ from typing import Optional
 
 import cv2
 import numpy as np
+
+from .grid_corner_detector import GridCornerDetector
 from .old_board_better import OldBoardBetterDetector, TemporalBoardStabilizer
 
 try:
@@ -21,151 +23,596 @@ list_of_videos = [
 
 
 class BoardDetector:
-    def __init__(self):
-        self.reference_detector = OldBoardBetterDetector()
+    """Board detector compatible with board_detection.py flow, using OldBoardBetter runtime recognition."""
+
+    def __init__(self, ximeaCamera=None, hold_frames: int = 3):
+        self.ximeaCamera = ximeaCamera
+        self.grid_detector = GridCornerDetector()
+        self.old_board_detector = OldBoardBetterDetector()
+        self.temporal_stabilizer = TemporalBoardStabilizer(hold_frames=max(0, int(hold_frames)))
+
+        # Keep behavior and attributes expected by checkers_node/game.
+        self.use_old_board_better_runtime = True
+        self._old_board_runtime_reported = False
+        self.selected_difficulty = 3
+        self.numberOfEmptyFields = 40
+        self.param1ForGetAllContours = 255
+        self.gameBoardFieldsContours = self._get_grid_squares_contours()
+        self.is_initialized = False
+
+        self.empty_variance_threshold = 15.0
+        self.black_variance_threshold = 1000.0
+        self.white_piece_threshold = 1000.0
+
+        self.bounderies = None
+
+        if self.ximeaCamera is not None:
+            self._init()
+
+    def _init(self):
+        # 1. Camera Adjustment Phase
+        self._camera_adjustment_window()
+
+        # 2. Board Corner Detection (AUTO)
+        print("\nAttempting automatic board detection...")
+        auto_corners = self._auto_detect_corners()
+
+        if auto_corners is not None:
+            self.bounderies = auto_corners
+            print("? Automatic detection successful!")
+        else:
+            print("? Automatic detection failed. Falling back to manual selection.")
+            self.bounderies = self._get_trim_param_manual()
+
+        # 3. Piece placement verification window
+        self._piece_placement_window()
+
+        # 4. Final initialization
+        self.numberOfEmptyFields = 40
+        self.param1ForGetAllContours = 255
+        self.gameBoardFieldsContours = self._get_grid_squares_contours()
+
+        self.is_initialized = False
+        self.selected_difficulty = 3
+        print("Default runtime board detector: OldBoardBetter")
 
     def detect_corners_debug(self, image: np.ndarray):
-        return self.reference_detector.detect_corners_debug(image)
+        return self.old_board_detector.detect_corners_debug(image)
 
-    def lighting_optimization(self, closed: np.ndarray) -> np.ndarray:
-        contrast_boost = self.clahe.apply(closed)
-        _, bw = cv2.threshold(contrast_boost, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        bw = cv2.morphologyEx(
-            bw,
-            cv2.MORPH_CLOSE,
-            cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)),
-            iterations=1,
+    def _auto_detect_corners(self):
+        if self.ximeaCamera is None:
+            return None
+        image = self.ximeaCamera.get_camera_image()
+        return self._auto_detect_corners_from_image(image)
+
+    def _auto_detect_corners_from_image(self, image):
+        if image is None:
+            return None
+
+        # First try grid-based Hough detector
+        grid_result = self.grid_detector.detect_corners(image)
+        if grid_result is not None:
+            print("  -> Grid-based detection succeeded")
+            return self._orient_corners(grid_result.corners, image)
+
+        # Second try OldBoardBetter detector
+        old_corners, _old_debug = self.old_board_detector.detect_corners_debug(image)
+        if old_corners is not None:
+            print("  -> OldBoardBetter detection succeeded")
+            return self._orient_corners(old_corners, image)
+
+        # Final fallback
+        return self._auto_detect_corners_contour_fallback(image)
+
+    def _auto_detect_corners_contour_fallback(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        thresh = cv2.adaptiveThreshold(
+            blur,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            11,
+            2,
         )
-        return bw
 
-    def _detect_lines(self, edge_image: np.ndarray):
-        h, w = edge_image.shape[:2]
-        min_len = int(0.18 * max(h, w))
-        lines = cv2.HoughLinesP(
-            edge_image,
-            rho=1,
-            theta=np.pi / 180,
-            threshold=110,
-            minLineLength=min_len,
-            maxLineGap=12,
-        )
-        if lines is None:
-            return []
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        raw_lines = [tuple(map(int, l[0])) for l in lines]
-        length_filtered = [line for line in raw_lines if self._line_length(line) >= min_len]
-        if not length_filtered:
-            return []
-
-        filtered = self._filter_lines_by_dominant_orientations(length_filtered)
-        filtered.sort(key=self._line_length, reverse=True)
-        return filtered[:80]
-
-    def _line_length(self, line) -> float:
-        x1, y1, x2, y2 = line
-        return float(np.hypot(x2 - x1, y2 - y1))
-
-    def _line_angle_deg(self, line) -> float:
-        x1, y1, x2, y2 = line
-        angle = float(np.degrees(np.arctan2(y2 - y1, x2 - x1)))
-        return angle % 180.0
-
-    def _angle_diff_180(self, a: float, b: float) -> float:
-        diff = abs(a - b) % 180.0
-        return min(diff, 180.0 - diff)
-
-    def _filter_lines_by_dominant_orientations(self, lines):
-        if len(lines) <= 2:
-            return lines
-
-        bin_size = 10.0
-        num_bins = int(180 / bin_size)
-        weighted_bins = np.zeros(num_bins, dtype=np.float32)
-
-        for line in lines:
-            angle = self._line_angle_deg(line)
-            idx = int(angle // bin_size) % num_bins
-            weighted_bins[idx] += self._line_length(line)
-
-        primary_idx = int(np.argmax(weighted_bins))
-        primary_angle = (primary_idx + 0.5) * bin_size
-
-        secondary_idx = None
-        secondary_score = -1.0
-        for idx, score in enumerate(weighted_bins):
-            candidate_angle = (idx + 0.5) * bin_size
-            if self._angle_diff_180(candidate_angle, primary_angle) < 25.0:
-                continue
-            if score > secondary_score:
-                secondary_score = float(score)
-                secondary_idx = idx
-
-        keep_angles = [primary_angle]
-        if secondary_idx is not None and secondary_score > 0.0:
-            keep_angles.append((secondary_idx + 0.5) * bin_size)
-
-        filtered = []
-        for line in lines:
-            angle = self._line_angle_deg(line)
-            if any(self._angle_diff_180(angle, target) <= self.line_angle_tolerance_deg for target in keep_angles):
-                filtered.append(line)
-
-        return filtered if filtered else lines
-
-    def _largest_quadrilateral(self, binary_image: np.ndarray):
-        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        candidates = []
+        largest_area = 0
+        board_cnt = None
 
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 12000:
+            if area < 50000:
                 continue
 
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
-            if len(approx) != 4:
-                hull = cv2.convexHull(cnt)
-                peri_h = cv2.arcLength(hull, True)
-                approx = cv2.approxPolyDP(hull, 0.02 * peri_h, True)
-                if len(approx) != 4:
-                    continue
 
-            quad = approx.reshape(4, 2).astype(np.float32)
-            candidates.append((area, quad))
+            if len(approx) == 4 and area > largest_area:
+                largest_area = area
+                board_cnt = approx
 
-        if not candidates:
+        if board_cnt is None:
             return None
 
-        candidates.sort(key=lambda item: item[0], reverse=True)
-        for _area, quad in candidates[:10]:
-            ordered_quad = self._order_points(quad)
-            if self._opposite_sides_parallel(ordered_quad, self.parallel_tolerance_deg):
-                return ordered_quad
-        return None
+        pts = board_cnt.reshape(4, 2)
+        rect = np.zeros((4, 2), dtype="float32")
 
-    def _opposite_sides_parallel(self, quad: np.ndarray, tolerance_deg: float) -> bool:
-        def direction_deg(p1: np.ndarray, p2: np.ndarray) -> float:
-            v = p2 - p1
-            return float(np.degrees(np.arctan2(v[1], v[0])))
-
-        d01 = direction_deg(quad[0], quad[1])
-        d23 = direction_deg(quad[2], quad[3])
-        d12 = direction_deg(quad[1], quad[2])
-        d30 = direction_deg(quad[3], quad[0])
-
-        pair_1_parallel = self._angle_diff_180(d01, d23) <= tolerance_deg
-        pair_2_parallel = self._angle_diff_180(d12, d30) <= tolerance_deg
-        return pair_1_parallel and pair_2_parallel
-
-    def _order_points(self, pts: np.ndarray) -> np.ndarray:
-        rect = np.zeros((4, 2), dtype=np.float32)
         s = pts.sum(axis=1)
         rect[0] = pts[np.argmin(s)]
         rect[2] = pts[np.argmax(s)]
+
         diff = np.diff(pts, axis=1)
         rect[1] = pts[np.argmin(diff)]
         rect[3] = pts[np.argmax(diff)]
-        return rect
+
+        return self._orient_corners(rect, image)
+
+    def _orient_corners(self, corners, image):
+        """Rotate corner order to best match expected board setup orientation."""
+        best_corners = corners
+        best_score = float("inf")
+
+        for _ in range(4):
+            warped = self._trim_image_perspective(image, corners)
+            if warped is None or warped.size == 0:
+                break
+
+            roi_tl = warped[10:90, 10:90]
+            roi_tr = warped[10:90, 710:790]
+            roi_br = warped[710:790, 710:790]
+            roi_bl = warped[710:790, 10:90]
+
+            v_tl = self._calculate_variance(roi_tl)
+            v_tr = self._calculate_variance(roi_tr)
+            v_br = self._calculate_variance(roi_br)
+            v_bl = self._calculate_variance(roi_bl)
+
+            score = 0.0
+            score += v_tl + v_br
+            if v_tr < 200:
+                score += 10000
+            if v_bl < 200:
+                score += 10000
+            if v_bl < v_tr:
+                score += 5000
+
+            if score < best_score:
+                best_score = score
+                best_corners = corners.copy()
+
+            corners = np.roll(corners, 1, axis=0)
+
+        print(f"  -> Oriented corners with score: {best_score}")
+        return best_corners
+
+    def _camera_adjustment_window(self):
+        if self.ximeaCamera is None:
+            return
+
+        print("\n" + "=" * 60)
+        print("STEP 0: CAMERA ADJUSTMENT")
+        print("=" * 60)
+        print("Adjust the camera so the whole board is visible.")
+        print("Press SPACE to continue when ready.")
+        print("-" * 60 + "\n")
+
+        while True:
+            image = self.ximeaCamera.get_camera_image()
+            if image is None:
+                continue
+
+            display = image.copy()
+            cv2.putText(
+                display,
+                "Adjust Camera. Press SPACE to continue",
+                (20, 40),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                2,
+            )
+            cv2.imshow("Camera Adjustment", display)
+
+            if cv2.waitKey(1) & 0xFF == 32:
+                cv2.destroyWindow("Camera Adjustment")
+                break
+
+    def _calculate_variance(self, image):
+        if image is None or image.size == 0:
+            return 0.0
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _mean, stddev = cv2.meanStdDev(gray)
+        return float(stddev[0][0] ** 2)
+
+    def _piece_placement_window(self):
+        if self.ximeaCamera is None:
+            return
+
+        print("\n" + "=" * 60)
+        print("STEP 3: PIECE PLACEMENT CHECK")
+        print("=" * 60)
+        print("Place pieces in starting positions.")
+        print("Press SPACE or ENTER to confirm and Start Game.")
+        print("-" * 60 + "\n")
+
+        while True:
+            image = self.ximeaCamera.get_camera_image()
+            if image is None:
+                continue
+            if self.bounderies is None:
+                continue
+
+            warped = self._trim_image_perspective(image, self.bounderies)
+            if warped is None:
+                continue
+
+            board, overlay, black_count, white_count, empty_thr, black_thr = self._classify_warped_board(warped)
+            if board is None:
+                display = warped.copy()
+                cv2.putText(display, "Recognition failed", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 165, 255), 2)
+                cv2.imshow("Piece Placement & Detection", display)
+            else:
+                display = overlay.copy()
+                cv2.putText(
+                    display,
+                    f"Black: {black_count} | White: {white_count}",
+                    (20, 770),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    2,
+                )
+                cv2.putText(
+                    display,
+                    f"Thresholds E<{empty_thr:.1f}<B<{black_thr:.1f}<W",
+                    (20, 795),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.55,
+                    (255, 255, 255),
+                    1,
+                )
+                cv2.imshow("Piece Placement & Detection", display)
+
+            key = cv2.waitKey(10) & 0xFF
+            if key in (13, 32):
+                cv2.destroyWindow("Piece Placement & Detection")
+                print("? Board setup confirmed! Starting game...\n")
+                break
+            if key == 27:
+                cv2.destroyWindow("Piece Placement & Detection")
+                print("? Detection skipped by user.")
+                break
+
+    def _classify_warped_board(self, warped: np.ndarray):
+        if warped is None:
+            return None, None, 0, 0, 0.0, 0.0
+
+        # Preferred path: use OldBoardBetter algorithm implementation.
+        classify_fn = getattr(self.old_board_detector, "classify_warped_board", None)
+        if callable(classify_fn):
+            board, debug = classify_fn(warped)
+            if board is None:
+                return None, None, 0, 0, 0.0, 0.0
+
+            overlay = debug.get("overlay", warped.copy())
+            black_count = int(debug.get("black_count", int(np.count_nonzero(board == 2))))
+            white_count = int(debug.get("white_count", int(np.count_nonzero(board == 1))))
+            empty_thr = float(debug.get("empty_threshold", 0.0))
+            black_thr = float(debug.get("black_threshold", 0.0))
+            return board.astype(object), overlay, black_count, white_count, empty_thr, black_thr
+
+        # Fallback path if old_board_better lacks runtime classifier.
+        gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        h, w = blur.shape[:2]
+        cell_h = h // 8
+        cell_w = w // 8
+        margin = max(6, min(cell_h, cell_w) // 10)
+
+        stats = []
+        variances = []
+        for row in range(8):
+            for col in range(8):
+                if (row + col) % 2 == 0:
+                    continue
+
+                y1 = row * cell_h + margin
+                y2 = (row + 1) * cell_h - margin
+                x1 = col * cell_w + margin
+                x2 = (col + 1) * cell_w - margin
+
+                if y2 <= y1 or x2 <= x1:
+                    variance = 0.0
+                else:
+                    roi = blur[y1:y2, x1:x2]
+                    variance = float(np.var(roi)) if roi.size > 0 else 0.0
+
+                stats.append((row, col, variance))
+                variances.append(variance)
+
+        if len(variances) == 0:
+            return None, None, 0, 0, 0.0, 0.0
+
+        var_array = np.array(variances, dtype=np.float32)
+        empty_thr = float(np.percentile(var_array, 33))
+        black_thr = float(np.percentile(var_array, 66))
+        if black_thr <= empty_thr:
+            black_thr = empty_thr + max(1.0, float(np.std(var_array)))
+
+        board = np.zeros((8, 8), dtype=np.int8)
+        black_count = 0
+        white_count = 0
+
+        for row, col, variance in stats:
+            if variance < empty_thr:
+                board[row, col] = 0
+            elif variance < black_thr:
+                board[row, col] = 2
+                black_count += 1
+            else:
+                board[row, col] = 1
+                white_count += 1
+
+        overlay = warped.copy()
+        for row in range(8):
+            for col in range(8):
+                x1 = col * cell_w
+                y1 = row * cell_h
+                x2 = x1 + cell_w
+                y2 = y1 + cell_h
+
+                if (row + col) % 2 == 0:
+                    cv2.rectangle(overlay, (x1, y1), (x2, y2), (70, 70, 70), 1)
+                    continue
+
+                value = int(board[row, col])
+                if value == 0:
+                    color = (0, 255, 0)
+                elif value == 2:
+                    color = (255, 0, 255)
+                else:
+                    color = (0, 255, 255)
+
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 2)
+
+        return board.astype(object), overlay, black_count, white_count, empty_thr, black_thr
+
+    def _get_grid_squares_contours(self):
+        contours = []
+        cell_size = 100
+        for row in range(8):
+            row_cnts = []
+            for col in range(8):
+                x = col * cell_size
+                y = row * cell_size
+                row_cnts.append([x, y, cell_size, cell_size])
+            contours.append(row_cnts)
+        return contours
+
+    def get_board(self, cameraImage, game):
+        """Main runtime entry point, compatible with board_detection.py."""
+        if cameraImage is None:
+            return None
+
+        if self.bounderies is None:
+            auto_corners = self._auto_detect_corners_from_image(cameraImage)
+            if auto_corners is None:
+                return None
+            self.bounderies = auto_corners
+
+        warped = self._trim_image_perspective(cameraImage, self.bounderies)
+        if warped is None:
+            return None
+
+        if not hasattr(self, "gameBoardFieldsContours") or self.gameBoardFieldsContours is None:
+            self.gameBoardFieldsContours = self._get_grid_squares_contours()
+
+        self.set_number_of_empty_fields(game)
+
+        if self.use_old_board_better_runtime:
+            board = self._get_board_with_old_board_better(warped)
+            if board is not None:
+                return board
+
+        # Fallback: legacy threshold board extraction.
+        return self._get_board_from_image_fallback(warped)
+
+    def _get_board_with_old_board_better(self, warped_board_image):
+        board, overlay, black_count, white_count, empty_thr, black_thr = self._classify_warped_board(warped_board_image)
+        if board is None:
+            return None
+
+        cv2.imshow("gameboard", overlay)
+
+        if (not self._old_board_runtime_reported) or (
+            (not self.is_initialized) and black_count == 12 and white_count == 12
+        ):
+            print("\n" + "=" * 60)
+            print("BOARD STATE (OLDBOARDBETTER DEFAULT)")
+            print("=" * 60)
+            print(f"  Detected: Black={black_count}, White={white_count}")
+            print(f"  Adaptive thresholds: Empty<{empty_thr:.1f}<Black<{black_thr:.1f}<White")
+
+            if black_count == 12 and white_count == 12:
+                print("  ? Perfect! Game ready")
+                print("  -> Press 'S' in any OpenCV window to start the game")
+                self.is_initialized = True
+            else:
+                print("  ? Piece count mismatch - fallback remains available if needed")
+
+            print("=" * 60 + "\n")
+            self._old_board_runtime_reported = True
+
+        return board
+
+    def _get_board_from_image_fallback(self, cameraImage):
+        board = np.empty((8, 8), dtype=object)
+        board.fill(0)
+
+        new_image = cameraImage.copy()
+        gray = cv2.cvtColor(cameraImage, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        black_count = 0
+        white_count = 0
+        position = 0
+
+        for row in range(len(self.gameBoardFieldsContours)):
+            for col in range(len(self.gameBoardFieldsContours[row])):
+                x, y, w_rect, h_rect = self.gameBoardFieldsContours[row][col]
+
+                padding = 10
+                x_pad = x + padding
+                y_pad = y + padding
+                w_pad = w_rect - 2 * padding
+                h_pad = h_rect - 2 * padding
+
+                if w_pad <= 0 or h_pad <= 0:
+                    board[row][col] = 0
+                    position += 1
+                    continue
+
+                square = blur[y_pad:y_pad + h_pad, x_pad:x_pad + w_pad]
+                if square.size == 0:
+                    board[row][col] = 0
+                    position += 1
+                    continue
+
+                variance = float(np.var(square))
+
+                if variance < self.empty_variance_threshold:
+                    board[row][col] = 0
+                    color = (0, 255, 255)
+                elif variance < self.black_variance_threshold:
+                    board[row][col] = 2
+                    black_count += 1
+                    color = (255, 0, 255)
+                else:
+                    board[row][col] = 1
+                    white_count += 1
+                    color = (0, 255, 255)
+
+                point_x = x + w_rect // 2
+                point_y = y + h_rect // 2
+                label = str(position)
+                cv2.putText(new_image, label, (point_x - 10, point_y + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                position += 1
+
+        cv2.putText(
+            new_image,
+            f"Fallback Black: {black_count} | White: {white_count}",
+            (10, 25),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 255),
+            2,
+        )
+        cv2.imshow("gameboard", new_image)
+
+        return board
+
+    def _trim_image_perspective(self, image, corners):
+        if image is None:
+            return None
+        if corners is None or len(corners) != 4:
+            return image
+
+        board_size = 800
+        dst_points = np.array(
+            [
+                [0, 0],
+                [board_size, 0],
+                [board_size, board_size],
+                [0, board_size],
+            ],
+            dtype=np.float32,
+        )
+        matrix = cv2.getPerspectiveTransform(corners.astype(np.float32), dst_points)
+        return cv2.warpPerspective(image, matrix, (board_size, board_size))
+
+    def _get_trim_param_manual(self):
+        if self.ximeaCamera is None:
+            return None
+
+        corners = []
+        clone = None
+
+        def click_event(event, x, y, _flags, _params):
+            nonlocal corners, clone
+            if event == cv2.EVENT_LBUTTONDOWN and len(corners) < 4:
+                corners.append([x, y])
+                print(f"  ? Corner {len(corners)}/4 selected: ({x}, {y})")
+
+                cv2.circle(clone, (x, y), 5, (0, 255, 0), -1)
+                if len(corners) > 1:
+                    cv2.line(clone, tuple(corners[-2]), tuple(corners[-1]), (0, 255, 0), 2)
+                if len(corners) == 4:
+                    cv2.line(clone, tuple(corners[-1]), tuple(corners[0]), (0, 255, 0), 2)
+                    print("\n  -> All 4 corners selected!")
+                    print("  -> Press SPACE in 'Select Board Corners' window to confirm")
+                    print("  -> Press 'R' to reset and reselect corners\n")
+                cv2.imshow("Select Board Corners", clone)
+
+        print("\n" + "=" * 60)
+        print("STEP 1: BOARD CORNER SELECTION")
+        print("=" * 60)
+        print("Click on the 4 corners of the board in this order:")
+        print("  1. White square on black side (Top-Left)")
+        print("  2. Black square with black piece (Top-Right)")
+        print("  3. White square on white side (Bottom-Right)")
+        print("  4. White piece on black square (Bottom-Left)")
+        print("\nControls:")
+        print("  SPACE - Confirm selection")
+        print("  R     - Reset points")
+        print("  ESC   - Exit")
+        print("-" * 60 + "\n")
+
+        while True:
+            image = self.ximeaCamera.get_camera_image()
+            if image is None:
+                continue
+            clone = image.copy()
+
+            for i, corner in enumerate(corners):
+                cv2.circle(clone, tuple(corner), 5, (0, 255, 0), -1)
+                cv2.putText(clone, str(i + 1), (corner[0] + 10, corner[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                if i > 0:
+                    cv2.line(clone, tuple(corners[i - 1]), tuple(corners[i]), (0, 255, 0), 2)
+
+            if len(corners) == 4:
+                cv2.line(clone, tuple(corners[-1]), tuple(corners[0]), (0, 255, 0), 2)
+
+            cv2.imshow("Select Board Corners", clone)
+            cv2.setMouseCallback("Select Board Corners", click_event)
+
+            key = cv2.waitKey(1) & 0xFF
+
+            if key in (ord("r"), ord("R")):
+                corners = []
+                print("\n  ? Points reset - start selecting again\n")
+
+            if key == 32 and len(corners) == 4:
+                cv2.destroyWindow("Select Board Corners")
+                print("? Board corners saved!\n")
+                print("=" * 60)
+                print("STEP 2: DETECTING BOARD GRID")
+                print("=" * 60 + "\n")
+                return np.array(corners, dtype=np.float32)
+
+            if key == 27:
+                cv2.destroyWindow("Select Board Corners")
+                print("\n? Board selection cancelled\n")
+                return None
+
+    def set_number_of_empty_fields(self, game):
+        self.numberOfEmptyFields = 64 - game.board.black_left - game.board.white_left
+
+
+# Compatibility alias for modules expecting board_detection.BoardDetection
+BoardDetection = BoardDetector
 
 
 def _resolve_video_path(video_name: str) -> Path:
@@ -187,82 +634,13 @@ def _resolve_video_path(video_name: str) -> Path:
     raise FileNotFoundError(f"Video not found: {video_name}")
 
 
-def _warp_board(frame: np.ndarray, corners: np.ndarray, size: int = 800) -> np.ndarray:
-    dst = np.array([[0, 0], [size - 1, 0], [size - 1, size - 1], [0, size - 1]], dtype=np.float32)
-    matrix = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
-    return cv2.warpPerspective(frame, matrix, (size, size))
-
-
-def _classify_board_cells(warped: np.ndarray):
-    gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
-    cell_size = warped.shape[0] // 8
-    margin = max(6, cell_size // 10)
-
-    variances = []
-    for row in range(8):
-        for col in range(8):
-            y1 = row * cell_size + margin
-            y2 = (row + 1) * cell_size - margin
-            x1 = col * cell_size + margin
-            x2 = (col + 1) * cell_size - margin
-            roi = gray[y1:y2, x1:x2]
-            variances.append(float(np.var(roi)) if roi.size > 0 else 0.0)
-
-    all_vars = np.array(variances, dtype=np.float32)
-    empty_threshold = float(np.percentile(all_vars, 40))
-    black_threshold = float(np.percentile(all_vars, 75))
-
-    labels = []
-    idx = 0
-    for _row in range(8):
-        row_labels = []
-        for _col in range(8):
-            var = variances[idx]
-            idx += 1
-            if var < empty_threshold:
-                row_labels.append(("E", var))
-            elif var < black_threshold:
-                row_labels.append(("B", var))
-            else:
-                row_labels.append(("W", var))
-        labels.append(row_labels)
-
-    return labels, empty_threshold, black_threshold
-
-
-def _draw_board_overlay(warped: np.ndarray, labels) -> np.ndarray:
-    vis = warped.copy()
-    cell_size = warped.shape[0] // 8
-
-    for row in range(8):
-        for col in range(8):
-            x1 = col * cell_size
-            y1 = row * cell_size
-            x2 = x1 + cell_size
-            y2 = y1 + cell_size
-
-            label, variance = labels[row][col]
-            if label == "E":
-                color = (0, 255, 0)
-            elif label == "B":
-                color = (255, 0, 255)
-            else:
-                color = (255, 255, 0)
-
-            cv2.rectangle(vis, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(vis, label, (x1 + 8, y1 + 28), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-            cv2.putText(vis, f"{int(variance)}", (x1 + 8, y2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
-
-    return vis
-
-
 def _consensus_corners(corner_candidates, bin_size: float = 8.0) -> Optional[np.ndarray]:
     if not corner_candidates:
         return None
 
     consensus = np.zeros((4, 2), dtype=np.float32)
     for corner_idx in range(4):
-        point_bins = []
+        bins = []
         point_map = {}
 
         for corners in corner_candidates:
@@ -271,41 +649,42 @@ def _consensus_corners(corner_candidates, bin_size: float = 8.0) -> Optional[np.
                 int(round(float(point[0]) / bin_size)),
                 int(round(float(point[1]) / bin_size)),
             )
-            point_bins.append(point_key)
+            bins.append(point_key)
             if point_key not in point_map:
                 point_map[point_key] = np.array(point, dtype=np.float32)
 
-        winning_key, _winning_votes = Counter(point_bins).most_common(1)[0]
-        consensus[corner_idx] = point_map[winning_key]
+        winner, _votes = Counter(bins).most_common(1)[0]
+        consensus[corner_idx] = point_map[winner]
 
     return consensus
 
 
-def _render_pipeline_panel(frame: np.ndarray, fixed_corners: Optional[np.ndarray]):
-    frame_vis = frame.copy()
+def _render_demo_panel(frame: np.ndarray, detector: BoardDetector, corners: Optional[np.ndarray]):
+    vis = frame.copy()
     board_vis = np.zeros((800, 800, 3), dtype=np.uint8)
 
-    if fixed_corners is not None:
-        pts = fixed_corners.astype(int)
+    if corners is not None:
+        pts = corners.astype(int)
         for i in range(4):
-            cv2.line(frame_vis, tuple(pts[i]), tuple(pts[(i + 1) % 4]), (0, 255, 0), 2)
+            cv2.line(vis, tuple(pts[i]), tuple(pts[(i + 1) % 4]), (0, 255, 0), 2)
 
-        warped = _warp_board(frame, fixed_corners, size=800)
-        labels, empty_thr, black_thr = _classify_board_cells(warped)
-        board_vis = _draw_board_overlay(warped, labels)
-        cv2.putText(board_vis, f"E<{empty_thr:.1f} <B<{black_thr:.1f} <W", (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        warped = detector._trim_image_perspective(frame, corners)
+        board, overlay, black_count, white_count, empty_thr, black_thr = detector._classify_warped_board(warped)
+        if board is not None and overlay is not None:
+            board_vis = cv2.resize(overlay, (800, 800), interpolation=cv2.INTER_AREA)
+            cv2.putText(board_vis, f"B:{black_count} W:{white_count}", (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(board_vis, f"E<{empty_thr:.1f}<B<{black_thr:.1f}<W", (15, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
 
-    left = cv2.resize(frame_vis, (800, 800), interpolation=cv2.INTER_AREA)
-    panel = np.hstack([left, board_vis])
-    return panel
+    left = cv2.resize(vis, (800, 800), interpolation=cv2.INTER_AREA)
+    return np.hstack([left, board_vis])
 
 
 def run_on_video(
     video_idx: int,
     slowmo: int = 120,
-    consensus_frames: int = 20,
-    lock_mode: str = "raw",
     hold_frames: int = 3,
+    lock_mode: str = "vote",
+    consensus_frames: int = 20,
 ):
     if video_idx < 0 or video_idx >= len(list_of_videos):
         raise IndexError(f"video_idx must be in range 0..{len(list_of_videos) - 1}")
@@ -315,11 +694,12 @@ def run_on_video(
     if not cap.isOpened():
         raise RuntimeError(f"Failed to open video: {video_path}")
 
-    detector = BoardDetector()
-    stabilizer = TemporalBoardStabilizer(hold_frames=hold_frames)
+    detector = BoardDetector(ximeaCamera=None, hold_frames=hold_frames)
+    stabilizer = TemporalBoardStabilizer(hold_frames=max(0, int(hold_frames)))
     fixed_corners = None
     frame_count_for_consensus = 0
     corner_candidates = []
+
     cv2.namedWindow("board_detection_1", cv2.WINDOW_NORMAL)
 
     while True:
@@ -329,12 +709,12 @@ def run_on_video(
 
         if lock_mode == "raw":
             corners, _debug = detector.detect_corners_debug(frame)
-            preview_corners, _used_hold = stabilizer.update(corners)
-            panel = _render_pipeline_panel(frame, preview_corners)
-            status = "DETECTED" if corners is not None else ("HOLD" if preview_corners is not None else "SEARCHING")
+            preview_corners, used_hold = stabilizer.update(corners)
+            panel = _render_demo_panel(frame, detector, preview_corners)
+
+            status = "DETECTED" if corners is not None else ("HOLD" if used_hold else "SEARCHING")
             color = (0, 255, 0) if status == "DETECTED" else ((0, 255, 255) if status == "HOLD" else (0, 165, 255))
-            cv2.putText(panel, f"Grid points: {status} (raw mode)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-            cv2.putText(panel, f"Hold frames: {hold_frames}", (20, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+            cv2.putText(panel, f"status={status} (raw)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
         else:
             preview_corners = fixed_corners
             if fixed_corners is None and frame_count_for_consensus < consensus_frames:
@@ -351,20 +731,20 @@ def run_on_video(
                         frame_count_for_consensus = 0
                         corner_candidates.clear()
 
-            panel = _render_pipeline_panel(frame, preview_corners)
+            panel = _render_demo_panel(frame, detector, preview_corners)
             if fixed_corners is not None:
-                lock_status = "LOCKED"
-                lock_color = (0, 255, 0)
+                status = "LOCKED"
+                color = (0, 255, 0)
             elif frame_count_for_consensus < consensus_frames:
-                lock_status = f"VOTING {frame_count_for_consensus}/{consensus_frames}"
-                lock_color = (0, 165, 255)
+                status = f"VOTING {frame_count_for_consensus}/{consensus_frames}"
+                color = (0, 165, 255)
             else:
-                lock_status = "SEARCHING"
-                lock_color = (0, 165, 255)
-            cv2.putText(panel, f"Grid points: {lock_status} (vote mode)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, lock_color, 2)
-            cv2.putText(panel, f"Vote hits: {len(corner_candidates)}", (20, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
-        cv2.putText(panel, "Left: source+corners | Right: warped board + 8x8 piece classification", (20, 770), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-        cv2.putText(panel, "Keys: q/ESC=quit, r=reset grid lock", (20, 795), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+                status = "SEARCHING"
+                color = (0, 165, 255)
+            cv2.putText(panel, f"status={status} (vote)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+        cv2.putText(panel, "Left: source+corners | Right: warped board recognition", (20, 770), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.putText(panel, "Keys: q/ESC=quit, r=reset lock", (20, 795), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
         cv2.imshow("board_detection_1", panel)
 
         key = cv2.waitKey(max(1, int(slowmo))) & 0xFF
@@ -372,7 +752,7 @@ def run_on_video(
             fixed_corners = None
             frame_count_for_consensus = 0
             corner_candidates.clear()
-            stabilizer = TemporalBoardStabilizer(hold_frames=hold_frames)
+            stabilizer = TemporalBoardStabilizer(hold_frames=max(0, int(hold_frames)))
         if key in (27, ord("q")):
             break
 
@@ -382,19 +762,20 @@ def run_on_video(
 
 def run_on_ximea(
     slowmo: int = 1,
-    consensus_frames: int = 20,
-    lock_mode: str = "raw",
     hold_frames: int = 3,
+    lock_mode: str = "vote",
+    consensus_frames: int = 20,
 ):
     if XimeaCamera is None:
         raise RuntimeError("XimeaCamera is not available. Ensure ximea SDK/python package is installed.")
 
     camera = XimeaCamera()
-    detector = BoardDetector()
-    stabilizer = TemporalBoardStabilizer(hold_frames=hold_frames)
+    detector = BoardDetector(ximeaCamera=None, hold_frames=hold_frames)
+    stabilizer = TemporalBoardStabilizer(hold_frames=max(0, int(hold_frames)))
     fixed_corners = None
     frame_count_for_consensus = 0
     corner_candidates = []
+
     cv2.namedWindow("board_detection_1", cv2.WINDOW_NORMAL)
 
     while True:
@@ -404,12 +785,12 @@ def run_on_ximea(
 
         if lock_mode == "raw":
             corners, _debug = detector.detect_corners_debug(frame)
-            preview_corners, _used_hold = stabilizer.update(corners)
-            panel = _render_pipeline_panel(frame, preview_corners)
-            status = "DETECTED" if corners is not None else ("HOLD" if preview_corners is not None else "SEARCHING")
+            preview_corners, used_hold = stabilizer.update(corners)
+            panel = _render_demo_panel(frame, detector, preview_corners)
+
+            status = "DETECTED" if corners is not None else ("HOLD" if used_hold else "SEARCHING")
             color = (0, 255, 0) if status == "DETECTED" else ((0, 255, 255) if status == "HOLD" else (0, 165, 255))
-            cv2.putText(panel, f"Grid points: {status} (raw mode)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-            cv2.putText(panel, f"Hold frames: {hold_frames}", (20, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+            cv2.putText(panel, f"status={status} (raw)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
         else:
             preview_corners = fixed_corners
             if fixed_corners is None and frame_count_for_consensus < consensus_frames:
@@ -426,21 +807,20 @@ def run_on_ximea(
                         frame_count_for_consensus = 0
                         corner_candidates.clear()
 
-            panel = _render_pipeline_panel(frame, preview_corners)
+            panel = _render_demo_panel(frame, detector, preview_corners)
             if fixed_corners is not None:
-                lock_status = "LOCKED"
-                lock_color = (0, 255, 0)
+                status = "LOCKED"
+                color = (0, 255, 0)
             elif frame_count_for_consensus < consensus_frames:
-                lock_status = f"VOTING {frame_count_for_consensus}/{consensus_frames}"
-                lock_color = (0, 165, 255)
+                status = f"VOTING {frame_count_for_consensus}/{consensus_frames}"
+                color = (0, 165, 255)
             else:
-                lock_status = "SEARCHING"
-                lock_color = (0, 165, 255)
-            cv2.putText(panel, f"Grid points: {lock_status} (vote mode)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, lock_color, 2)
-            cv2.putText(panel, f"Vote hits: {len(corner_candidates)}", (20, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+                status = "SEARCHING"
+                color = (0, 165, 255)
+            cv2.putText(panel, f"status={status} (vote)", (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
-        cv2.putText(panel, "Left: source+corners | Right: warped board + 8x8 piece classification", (20, 770), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-        cv2.putText(panel, "Keys: q/ESC=quit, r=reset grid lock", (20, 795), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.putText(panel, "Left: source+corners | Right: warped board recognition", (20, 770), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.putText(panel, "Keys: q/ESC=quit, r=reset lock", (20, 795), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
         cv2.imshow("board_detection_1", panel)
 
         key = cv2.waitKey(max(1, int(slowmo))) & 0xFF
@@ -448,7 +828,7 @@ def run_on_ximea(
             fixed_corners = None
             frame_count_for_consensus = 0
             corner_candidates.clear()
-            stabilizer = TemporalBoardStabilizer(hold_frames=hold_frames)
+            stabilizer = TemporalBoardStabilizer(hold_frames=max(0, int(hold_frames)))
         if key in (27, ord("q")):
             break
 
@@ -456,13 +836,13 @@ def run_on_ximea(
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="board_detection_1: Ximea/video corner + grid + piece-color demo")
+    parser = argparse.ArgumentParser(description="board_detection_1: board_detection-compatible flow using old_board_better recognition")
     parser.add_argument("--mode", type=str, default="video", choices=["video", "ximea"], help="Input source")
     parser.add_argument("--video-idx", type=int, default=0, help="Index in list_of_videos for --mode video")
     parser.add_argument("--slowmo", type=int, default=120, help="Frame delay in ms")
-    parser.add_argument("--lock-mode", type=str, default="raw", choices=["raw", "vote"], help="raw matches old_board_better behavior, vote locks corners from voting window")
-    parser.add_argument("--hold-frames", type=int, default=3, help="Used in raw mode to hold last valid detection")
-    parser.add_argument("--consensus-frames", type=int, default=20, help="How many first frames are used for corner voting")
+    parser.add_argument("--lock-mode", type=str, default="vote", choices=["raw", "vote"], help="raw tracks continuously; vote locks corners after consensus")
+    parser.add_argument("--hold-frames", type=int, default=3, help="How many missed frames to keep last valid board")
+    parser.add_argument("--consensus-frames", type=int, default=20, help="Frames used to vote and lock corners in vote mode")
     parser.add_argument("--list-videos", action="store_true", help="Print available videos and exit")
     return parser.parse_args()
 
@@ -478,18 +858,18 @@ def main():
     if args.mode == "ximea":
         run_on_ximea(
             slowmo=args.slowmo,
-            consensus_frames=max(1, int(args.consensus_frames)),
-            lock_mode=args.lock_mode,
             hold_frames=max(0, int(args.hold_frames)),
+            lock_mode=args.lock_mode,
+            consensus_frames=max(1, int(args.consensus_frames)),
         )
         return
 
     run_on_video(
         video_idx=args.video_idx,
         slowmo=args.slowmo,
-        consensus_frames=max(1, int(args.consensus_frames)),
-        lock_mode=args.lock_mode,
         hold_frames=max(0, int(args.hold_frames)),
+        lock_mode=args.lock_mode,
+        consensus_frames=max(1, int(args.consensus_frames)),
     )
 
 

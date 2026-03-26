@@ -14,6 +14,9 @@ class BoardDetection:
         self.ximeaCamera = ximeaCamera
         self.grid_detector = GridCornerDetector()
         self.old_board_detector = OldBoardBetterDetector()
+        # Make OldBoardBetter the runtime default in ROS2; keep legacy fallback.
+        self.use_old_board_better_runtime = True
+        self._old_board_runtime_reported = False
         self._init()
         
 
@@ -49,6 +52,7 @@ class BoardDetection:
         
         self.is_initialized = False
         self.selected_difficulty = 3
+        print("Default runtime board detector: OldBoardBetter")
 
     def _auto_detect_corners(self):
         """
@@ -406,9 +410,49 @@ class BoardDetection:
              self.gameBoardFieldsContours = self._get_grid_squares_contours()
 
         self.set_number_of_empty_fields(game)
-        
-        # Pass [] as emptyFieldsContours since it's unused in _get_board_from_image
+
+        if self.use_old_board_better_runtime:
+            board = self._get_board_with_old_board_better(cameraImage)
+            if board is not None:
+                return board
+
+        # Fallback: previous variance-threshold runtime board extraction
         return self._get_board_from_image(cameraImage, [])
+
+    def _get_board_with_old_board_better(self, warped_board_image):
+        board, debug = self.old_board_detector.classify_warped_board(warped_board_image)
+        if board is None:
+            return None
+
+        overlay = debug.get("overlay")
+        if overlay is not None:
+            cv2.imshow("gameboard", overlay)
+
+        black_count = int(debug.get("black_count", int(np.count_nonzero(board == 2))))
+        white_count = int(debug.get("white_count", int(np.count_nonzero(board == 1))))
+
+        if (not self._old_board_runtime_reported) or (not self.is_initialized and black_count == 12 and white_count == 12):
+            print("\n" + "="*60)
+            print("BOARD STATE (OLDBOARDBETTER DEFAULT)")
+            print("="*60)
+            print(f"  Detected: Black={black_count}, White={white_count}")
+            print(
+                "  Adaptive thresholds: "
+                f"Empty<{debug.get('empty_threshold', 0.0):.1f}"
+                f"<Black<{debug.get('black_threshold', 0.0):.1f}<White"
+            )
+
+            if black_count == 12 and white_count == 12:
+                print("  ✓ Perfect! Game ready")
+                print("  → Press 'S' in any OpenCV window to start the game")
+                self.is_initialized = True
+            else:
+                print("  ⚠ Piece count mismatch - fallback remains available if needed")
+
+            print("="*60 + "\n")
+            self._old_board_runtime_reported = True
+
+        return board.astype(object)
 
     def _get_trim_param_manual(self):
         """
