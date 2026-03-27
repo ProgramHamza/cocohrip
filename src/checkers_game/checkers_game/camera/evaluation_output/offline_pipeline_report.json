@@ -1,0 +1,45 @@
+{
+  "settings": {
+    "max_frames": 240,
+    "ai_depth": 3,
+    "display": true,
+    "ros_message_class_available": false
+  },
+  "videos": [
+    {
+      "video_path": "..\\..\\videos_training\\2026-02-25_17-27-27.mp4",
+      "frames_processed": 240,
+      "corners_detected": true,
+      "corners_in_bounds_0_600": true,
+      "corners_tl_tr_br_bl": [
+        [
+          51.0,
+          0.0
+        ],
+        [
+          473.0,
+          25.0
+        ],
+        [
+          526.0,
+          526.0
+        ],
+        [
+          48.0,
+          566.0
+        ]
+      ],
+      "warp_ok_frames": 240,
+      "board_ok_frames": 240,
+      "exact_12_12_frames": 0,
+      "avg_black_count": 3.475,
+      "avg_white_count": 1.1958333333333333,
+      "sample_move_payload": null,
+      "move_payload_valid": false,
+      "move_payload_errors": [],
+      "ros_message_class_available": false,
+      "ros_message_compatible": false,
+      "ros_message_compatibility_detail": "not_run"
+    }
+  ]
+}

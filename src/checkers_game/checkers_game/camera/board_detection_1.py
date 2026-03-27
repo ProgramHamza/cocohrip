@@ -89,20 +89,13 @@ class BoardDetector:
         if image is None:
             return None
 
-        # First try grid-based Hough detector
-        grid_result = self.grid_detector.detect_corners(image)
-        if grid_result is not None:
-            print("  -> Grid-based detection succeeded")
-            return self._orient_corners(grid_result.corners, image)
-
-        # Second try OldBoardBetter detector
+        # Copy-pipeline corner strategy: rely on OldBoardBetter only.
+        # This keeps bd1 geometry behavior consistent with board_detection_copy.
         old_corners, _old_debug = self.old_board_detector.detect_corners_debug(image)
         if old_corners is not None:
-            print("  -> OldBoardBetter detection succeeded")
-            return self._orient_corners(old_corners, image)
-
-        # Final fallback
-        return self._auto_detect_corners_contour_fallback(image)
+            print("  -> Copy-style OldBoardBetter detection succeeded")
+            return old_corners
+        return None
 
     def _auto_detect_corners_contour_fallback(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -520,6 +513,7 @@ class BoardDetector:
         if corners is None or len(corners) != 4:
             return image
 
+        # Match board_detection_copy warp geometry exactly.
         board_size = 800
         dst_points = np.array(
             [
@@ -530,8 +524,9 @@ class BoardDetector:
             ],
             dtype=np.float32,
         )
-        matrix = cv2.getPerspectiveTransform(corners.astype(np.float32), dst_points)
-        return cv2.warpPerspective(image, matrix, (board_size, board_size))
+        matrix = cv2.getPerspectiveTransform(corners, dst_points)
+        warped = cv2.warpPerspective(image, matrix, (board_size, board_size))
+        return warped
 
     def _get_trim_param_manual(self):
         if self.ximeaCamera is None:

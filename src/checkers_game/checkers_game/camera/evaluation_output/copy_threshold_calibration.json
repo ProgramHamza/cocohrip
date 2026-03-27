@@ -1,0 +1,61 @@
+{
+  "empty_variance_threshold": 501.19329833984375,
+  "black_variance_threshold": 1685.120361328125,
+  "white_piece_threshold": 2034.83818359375,
+  "reference_mode": "copy_corners_plus_bd1_piece_labels_on_copy_warp",
+  "dark_only": true,
+  "frame_step": 1,
+  "max_frames_per_video": 300,
+  "videos": [
+    {
+      "video_path": "..\\..\\videos_training\\2026-02-25_17-27-27.mp4",
+      "reference_mode": "copy_corners_plus_bd1_piece_labels_on_copy_warp",
+      "processed_frames": 300,
+      "sample_count": 9600,
+      "skipped_no_reference": 0,
+      "skipped_no_warp": 0
+    },
+    {
+      "video_path": "..\\..\\videos_training\\2026-02-25_17-29-20.mp4",
+      "reference_mode": "copy_corners_plus_bd1_piece_labels_on_copy_warp",
+      "processed_frames": 300,
+      "sample_count": 9600,
+      "skipped_no_reference": 0,
+      "skipped_no_warp": 0
+    },
+    {
+      "video_path": "..\\..\\videos_training\\2026-02-25_17-32-05.mp4",
+      "reference_mode": "copy_corners_plus_bd1_piece_labels_on_copy_warp",
+      "processed_frames": 300,
+      "sample_count": 9600,
+      "skipped_no_reference": 0,
+      "skipped_no_warp": 0
+    }
+  ],
+  "sample_count_total": 28800,
+  "label_counts": {
+    "empty_0": 15234,
+    "white_1": 8323,
+    "black_2": 5243
+  },
+  "baseline_accuracy_copy_defaults": 0.40708333333333335,
+  "optimized_accuracy_vs_bd1": 0.6357291666666667,
+  "theoretical_train_accuracy": 0.6357291666666667,
+  "confusion_true_rows_pred_cols": [
+    [
+      6614,
+      5796,
+      2824
+    ],
+    [
+      0,
+      8223,
+      100
+    ],
+    [
+      458,
+      1313,
+      3472
+    ]
+  ]
+}

@@ -1,6 +1,13 @@
 import cv2
 from matplotlib.pyplot import imshow
-from .ximea_camera import XimeaCamera
+import json
+from pathlib import Path
+try:
+    from .ximea_camera import XimeaCamera
+    XIAPI_IMPORT_ERROR = None
+except Exception as ximea_import_error:
+    XimeaCamera = None
+    XIAPI_IMPORT_ERROR = ximea_import_error
 from .grid_corner_detector import GridCornerDetector
 from .old_board_better import OldBoardBetterDetector
 import numpy as np
@@ -11,18 +18,37 @@ from ..constants import BLACK, ROWS, RED, SQUARE_SIZE, COLS, WHITE, GREY, BROWN
 
 class BoardDetection:
 
-    def __init__(self, ximeaCamera=None, video_path=None):
+    def __init__(
+        self,
+        ximeaCamera=None,
+        video_path=None,
+        interactive=True,
+        show_windows=True,
+        loop_video=True,
+        prefer_video=False,
+        load_threshold_profile=True,
+        use_old_board_better_runtime=True,
+    ):
         self.grid_detector = GridCornerDetector()
         self.old_board_detector = OldBoardBetterDetector()
-        self.use_old_board_better_runtime = True
+        self.use_old_board_better_runtime = bool(use_old_board_better_runtime)
         self._old_board_runtime_reported = False
+        self.interactive = interactive
+        self.show_windows = show_windows
+        self.loop_video = loop_video
+        self.prefer_video = prefer_video
+        self.load_threshold_profile = load_threshold_profile
         self.video_capture = None
         self.video_path = video_path
         # Try to use XimeaCamera if provided or available
         if ximeaCamera is not None:
             self.ximeaCamera = ximeaCamera
+        elif self.video_path is not None and self.prefer_video:
+            self.ximeaCamera = None
         else:
             try:
+                if XimeaCamera is None:
+                    raise RuntimeError(f"ximea camera module unavailable: {XIAPI_IMPORT_ERROR}")
                 self.ximeaCamera = XimeaCamera()
             except Exception as e:
                 print(f"XimeaCamera not available: {e}\nFalling back to video input.")
@@ -39,6 +65,10 @@ class BoardDetection:
         
 
     def _init(self):
+        if not self.interactive:
+            self._init_non_interactive()
+            return
+
         # 1. Camera Adjustment Phase
         self._camera_adjustment_window()
 
@@ -57,9 +87,7 @@ class BoardDetection:
         # We skip "_calibrate_thresholds_from_corners" because auto-detect
         # doesn't know where pieces are.
         # Instead, we set defaults and let user verify in the placement window.
-        self.empty_variance_threshold = 15.0
-        self.black_variance_threshold = 1000.0
-        self.white_piece_threshold = 1000.0 # Anything above black
+        self._apply_default_thresholds()
         
         self._piece_placement_window()
 
@@ -70,7 +98,65 @@ class BoardDetection:
         
         self.is_initialized = False
         self.selected_difficulty = 3
-        print("Default runtime board detector: OldBoardBetter")
+        runtime_name = "OldBoardBetter" if self.use_old_board_better_runtime else "VarianceThresholdFallback"
+        print(f"Default runtime board detector: {runtime_name}")
+
+    def _init_non_interactive(self):
+        print("\n" + "=" * 60)
+        print("NON-INTERACTIVE INITIALIZATION (VIDEO/OFFLINE)")
+        print("=" * 60)
+
+        auto_corners = None
+        for _ in range(150):
+            frame = self.get_camera_image()
+            if frame is None:
+                continue
+            auto_corners = self._auto_detect_corners_from_image(frame)
+            if auto_corners is not None:
+                break
+
+        if auto_corners is None:
+            raise RuntimeError("Automatic board detection failed in non-interactive mode.")
+
+        self.bounderies = auto_corners
+        self._apply_default_thresholds()
+        self.numberOfEmptyFields = 40
+        self.param1ForGetAllContours = 255
+        self.gameBoardFieldsContours = self._get_grid_squares_contours()
+        self.is_initialized = False
+        self.selected_difficulty = 3
+        print("✓ Non-interactive initialization complete")
+        runtime_name = "OldBoardBetter" if self.use_old_board_better_runtime else "VarianceThresholdFallback"
+        print(f"Default runtime board detector: {runtime_name}")
+
+    def _show_debug_window(self, name, image):
+        if self.show_windows:
+            cv2.imshow(name, image)
+
+    def _apply_default_thresholds(self):
+        self.empty_variance_threshold = 15.0
+        self.black_variance_threshold = 1000.0
+        self.white_piece_threshold = 1000.0
+        self._load_threshold_profile_if_available()
+
+    def _load_threshold_profile_if_available(self):
+        if not self.load_threshold_profile:
+            return
+        profile_path = Path(__file__).resolve().parent / "evaluation_output" / "copy_threshold_calibration.json"
+        if not profile_path.exists():
+            return
+        try:
+            with profile_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.empty_variance_threshold = float(payload.get("empty_variance_threshold", self.empty_variance_threshold))
+            self.black_variance_threshold = float(payload.get("black_variance_threshold", self.black_variance_threshold))
+            self.white_piece_threshold = float(payload.get("white_piece_threshold", self.white_piece_threshold))
+            print(
+                "Loaded threshold profile: "
+                f"E<{self.empty_variance_threshold:.2f}<B<{self.black_variance_threshold:.2f}<W({self.white_piece_threshold:.2f})"
+            )
+        except Exception as exc:
+            print(f"Failed to load threshold profile {profile_path}: {exc}")
 
     def get_camera_image(self):
         """
@@ -80,6 +166,9 @@ class BoardDetection:
             return self.ximeaCamera.get_camera_image()
         elif self.video_capture is not None:
             ret, frame = self.video_capture.read()
+            if not ret and self.loop_video:
+                self.video_capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ret, frame = self.video_capture.read()
             if not ret:
                 print("End of video or cannot read frame.")
                 return None
@@ -250,11 +339,13 @@ class BoardDetection:
         print("-" * 60 + "\n")
 
         while True:
-            image = self.ximeaCamera.get_camera_image()
+            image = self.get_camera_image()
+            if image is None:
+                continue
             display = image.copy()
             cv2.putText(display, "Adjust Camera. Press SPACE to continue", (20, 40), 
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow("Camera Adjustment", display)
+            self._show_debug_window("Camera Adjustment", display)
             
             if cv2.waitKey(1) & 0xFF == 32: # SPACE
                 cv2.destroyWindow("Camera Adjustment")
@@ -268,7 +359,9 @@ class BoardDetection:
         Corner 3 (BR): White square on white side
         Corner 4 (BL): White piece on black square
         """
-        image = self.ximeaCamera.get_camera_image()
+        image = self.get_camera_image()
+        if image is None:
+            return
         warped = self._trim_image_perspective(image, self.bounderies)
         
         # Grid size is 800x800, so cell is 100x100
@@ -346,7 +439,7 @@ class BoardDetection:
         print("-" * 60 + "\n")
         
         while True:
-            image = self.ximeaCamera.get_camera_image()
+            image = self.get_camera_image()
             if image is None:
                 continue
 
@@ -387,7 +480,7 @@ class BoardDetection:
                     cv2.putText(display, f"{int(variance)}", (x1+5, y2-5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
                     cv2.putText(display, label, (x1+40, y1+60), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
 
-            cv2.imshow("Piece Placement & Detection", display)
+            self._show_debug_window("Piece Placement & Detection", display)
             
             key = cv2.waitKey(10) & 0xFF
             # Accept ENTER (13) or SPACE (32)
@@ -502,7 +595,7 @@ class BoardDetection:
             (255, 255, 255),
             1,
         )
-        cv2.imshow("gameboard", overlay)
+        self._show_debug_window("gameboard", overlay)
         black_count = int(bw_debug.get("black_count", int(np.count_nonzero(board == 2))))
         white_count = int(bw_debug.get("white_count", int(np.count_nonzero(board == 1))))
         if (not self._old_board_runtime_reported) or (not self.is_initialized and black_count == 12 and white_count == 12):
@@ -554,7 +647,7 @@ class BoardDetection:
                         print("  → Press SPACE in 'Select Board Corners' window to confirm")
                         print("  → Press 'R' to reset and reselect corners\n")
                     
-                    cv2.imshow("Select Board Corners", clone)
+                    self._show_debug_window("Select Board Corners", clone)
         
         print("\n" + "="*60)
         print("STEP 1: BOARD CORNER SELECTION")
@@ -572,7 +665,9 @@ class BoardDetection:
         
         while True:
             # Get fresh image
-            image = self.ximeaCamera.get_camera_image()
+            image = self.get_camera_image()
+            if image is None:
+                continue
             clone = image.copy()
             
             # Redraw existing corners
@@ -586,7 +681,7 @@ class BoardDetection:
             if len(corners) == 4:
                 cv2.line(clone, tuple(corners[-1]), tuple(corners[0]), (0, 255, 0), 2)
             
-            cv2.imshow("Select Board Corners", clone)
+            self._show_debug_window("Select Board Corners", clone)
             cv2.setMouseCallback("Select Board Corners", click_event)
             
             key = cv2.waitKey(1) & 0xFF
@@ -646,9 +741,11 @@ class BoardDetection:
         temp_bounderies = []
         while 1:
             temp_bounderies = []
-            cameraImage = self.ximeaCamera.get_camera_image()
+            cameraImage = self.get_camera_image()
+            if cameraImage is None:
+                continue
             cameraImage = self._trim_image(cameraImage, bounderies)
-            cv2.imshow("original", cameraImage)
+            self._show_debug_window("original", cameraImage)
 
             temp_bounderies.append(self._get_bounderies(cameraImage))
             
@@ -659,7 +756,7 @@ class BoardDetection:
             trimmed_image = cameraImage.copy()
             trimmed_image = trimmed_image[y:y+h, x:x+w]
 
-            cv2.imshow("trimming", trimmed_image)
+            self._show_debug_window("trimming", trimmed_image)
 
             key = cv2.waitKey(1) & 0xFF
             if key == 32:
@@ -683,7 +780,7 @@ class BoardDetection:
         # Threshold the image to separate the black frame
         thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-        cv2.imshow("thresh", thresh)
+        self._show_debug_window("thresh", thresh)
 
         # Find contours in the thresholded image
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -694,7 +791,7 @@ class BoardDetection:
         result = image.copy()
         for c in contours:
             cv2.drawContours(result, [c], -1, (0, 255, 0), 2)
-        cv2.imshow("contours", result)
+        self._show_debug_window("contours", result)
 
         return contours[0]
 
@@ -945,7 +1042,9 @@ class BoardDetection:
         # INITIALIZATION MODE - Wait loop for user to adjust and confirm
         while createTrackBars:
             # Get current image
-            current_image = self.ximeaCamera.get_camera_image()
+            current_image = self.get_camera_image()
+            if current_image is None:
+                continue
             current_image = self._trim_image_perspective(current_image, self.bounderies)
             current_gray = cv2.cvtColor(current_image, cv2.COLOR_BGR2GRAY)
             current_blur = cv2.GaussianBlur(current_gray, (5, 5), 0)
@@ -1180,9 +1279,9 @@ class BoardDetection:
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
             
             # Show windows side by side
-            cv2.imshow("Square_Classification", result)
-            cv2.imshow("Classification_Info", info_panel)
-            cv2.imshow("boardCamera", current_image)
+            self._show_debug_window("Square_Classification", result)
+            self._show_debug_window("Classification_Info", info_panel)
+            self._show_debug_window("boardCamera", current_image)
             
             # Wait for key press
             key = cv2.waitKey(30) & 0xFF
@@ -1379,7 +1478,7 @@ class BoardDetection:
         cv2.putText(new_image, text, (10, 25), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         
-        cv2.imshow("gameboard", new_image)
+        self._show_debug_window("gameboard", new_image)
         
         # Print status on first run or when counts change
         if not self.is_initialized:
