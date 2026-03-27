@@ -3,7 +3,7 @@ import cv2
 import pygame
 from .constants import WIDTH, HEIGHT, SQUARE_SIZE, RED, WHITE, BLACK
 from .camera.ximea_camera import XimeaCamera
-from .camera.board_detection_copy import BoardDetection
+from .camera.board_detection_1 import BoardDetection
 from .checkers.game import Game
 from .minimax.algorithm import WHITE, minimax
 import mediapipe as mp

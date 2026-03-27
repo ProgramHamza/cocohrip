@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import pytest
-from checkers_game.camera.board_detection_copy import BoardDetection
+from checkers_game.camera.board_detection_1 import BoardDetection
 
 # python
 

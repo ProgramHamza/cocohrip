@@ -302,25 +302,7 @@ class BoardDetector:
                 print("? Detection skipped by user.")
                 break
 
-    def _classify_warped_board(self, warped: np.ndarray):
-        if warped is None:
-            return None, None, 0, 0, 0.0, 0.0
-
-        # Preferred path: use OldBoardBetter algorithm implementation.
-        classify_fn = getattr(self.old_board_detector, "classify_warped_board", None)
-        if callable(classify_fn):
-            board, debug = classify_fn(warped)
-            if board is None:
-                return None, None, 0, 0, 0.0, 0.0
-
-            overlay = debug.get("overlay", warped.copy())
-            black_count = int(debug.get("black_count", int(np.count_nonzero(board == 2))))
-            white_count = int(debug.get("white_count", int(np.count_nonzero(board == 1))))
-            empty_thr = float(debug.get("empty_threshold", 0.0))
-            black_thr = float(debug.get("black_threshold", 0.0))
-            return board.astype(object), overlay, black_count, white_count, empty_thr, black_thr
-
-        # Fallback path if old_board_better lacks runtime classifier.
+    def _extract_dark_square_variances(self, warped: np.ndarray):
         gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -330,7 +312,6 @@ class BoardDetector:
         margin = max(6, min(cell_h, cell_w) // 10)
 
         stats = []
-        variances = []
         for row in range(8):
             for col in range(8):
                 if (row + col) % 2 == 0:
@@ -348,17 +329,22 @@ class BoardDetector:
                     variance = float(np.var(roi)) if roi.size > 0 else 0.0
 
                 stats.append((row, col, variance))
-                variances.append(variance)
 
-        if len(variances) == 0:
-            return None, None, 0, 0, 0.0, 0.0
+        return stats, cell_h, cell_w
 
-        var_array = np.array(variances, dtype=np.float32)
-        empty_thr = float(np.percentile(var_array, 33))
-        black_thr = float(np.percentile(var_array, 66))
-        if black_thr <= empty_thr:
-            black_thr = empty_thr + max(1.0, float(np.std(var_array)))
+    def _estimate_black_threshold_from_occupied(self, occupied_vars: np.ndarray, default_value: float) -> float:
+        if occupied_vars.size < 2:
+            return float(default_value)
+        try:
+            vals = occupied_vars.astype(np.float32).reshape(-1, 1)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.2)
+            _compactness, _labels, centers = cv2.kmeans(vals, 2, None, criteria, 5, cv2.KMEANS_PP_CENTERS)
+            centers = np.sort(centers.flatten())
+            return float((centers[0] + centers[1]) / 2.0)
+        except Exception:
+            return float(np.percentile(occupied_vars, 50))
 
+    def _build_board_from_thresholds(self, warped: np.ndarray, stats, cell_h: int, cell_w: int, empty_thr: float, black_thr: float):
         board = np.zeros((8, 8), dtype=np.int8)
         black_count = 0
         white_count = 0
@@ -392,10 +378,111 @@ class BoardDetector:
                     color = (255, 0, 255)
                 else:
                     color = (0, 255, 255)
-
                 cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 2)
 
-        return board.astype(object), overlay, black_count, white_count, empty_thr, black_thr
+        return board.astype(object), overlay, int(black_count), int(white_count)
+
+    def _score_candidate(self, board: np.ndarray, black_count: int, white_count: int) -> float:
+        expected_black = int(max(0, self.expected_black_left))
+        expected_white = int(max(0, self.expected_white_left))
+        expected_dark_empty = int(max(0, min(32, self.numberOfEmptyFields - 32)))
+        dark_empty = 32 - int(black_count) - int(white_count)
+
+        score = 0.0
+        score += abs(int(black_count) - expected_black) * 3.0
+        score += abs(int(white_count) - expected_white) * 3.0
+        score += abs(int(dark_empty) - expected_dark_empty) * 2.0
+
+        if self._last_board is not None and isinstance(self._last_board, np.ndarray):
+            changed = float(np.count_nonzero(self._last_board != board))
+            # Penalize noisy jumps, but allow genuine move changes.
+            if changed > 8:
+                score += (changed - 8.0) * 0.5
+
+        return score
+
+    def _classify_warped_board(self, warped: np.ndarray):
+        if warped is None:
+            return None, None, 0, 0, 0.0, 0.0
+
+        stats, cell_h, cell_w = self._extract_dark_square_variances(warped)
+        if len(stats) == 0:
+            return None, None, 0, 0, 0.0, 0.0
+        var_array = np.array([v for _, _, v in stats], dtype=np.float32)
+
+        candidates = []
+
+        # Candidate 1: OldBoardBetter direct output
+        classify_fn = getattr(self.old_board_detector, "classify_warped_board", None)
+        if callable(classify_fn):
+            try:
+                board_old, debug = classify_fn(warped)
+                if board_old is not None:
+                    board_old = board_old.astype(object)
+                    b_old = int(debug.get("black_count", int(np.count_nonzero(board_old == 2))))
+                    w_old = int(debug.get("white_count", int(np.count_nonzero(board_old == 1))))
+                    e_old = float(debug.get("empty_threshold", self.empty_variance_threshold))
+                    bt_old = float(debug.get("black_threshold", self.black_variance_threshold))
+                    ov_old = debug.get("overlay", warped.copy())
+                    score_old = self._score_candidate(np.array(board_old, dtype=np.int32), b_old, w_old)
+                    candidates.append(("old_board_better", score_old, board_old, ov_old, b_old, w_old, e_old, bt_old))
+            except Exception:
+                pass
+
+        # Candidate 2: fixed/profile thresholds
+        e_fixed = float(self.empty_variance_threshold)
+        b_fixed = float(max(self.black_variance_threshold, e_fixed + 1.0))
+        board_fixed, ov_fixed, b_fixed_n, w_fixed_n = self._build_board_from_thresholds(
+            warped, stats, cell_h, cell_w, e_fixed, b_fixed
+        )
+        score_fixed = self._score_candidate(np.array(board_fixed, dtype=np.int32), b_fixed_n, w_fixed_n)
+        candidates.append(("fixed_thresholds", score_fixed, board_fixed, ov_fixed, b_fixed_n, w_fixed_n, e_fixed, b_fixed))
+
+        # Candidate 3: adaptive percentiles
+        e_adapt = float(np.percentile(var_array, 33))
+        b_adapt = float(np.percentile(var_array, 66))
+        if b_adapt <= e_adapt:
+            b_adapt = e_adapt + max(1.0, float(np.std(var_array)))
+        board_adapt, ov_adapt, b_adapt_n, w_adapt_n = self._build_board_from_thresholds(
+            warped, stats, cell_h, cell_w, e_adapt, b_adapt
+        )
+        score_adapt = self._score_candidate(np.array(board_adapt, dtype=np.int32), b_adapt_n, w_adapt_n)
+        candidates.append(("adaptive_percentiles", score_adapt, board_adapt, ov_adapt, b_adapt_n, w_adapt_n, e_adapt, b_adapt))
+
+        # Candidate 4: expected-empty constrained split
+        expected_dark_empty = int(max(0, min(32, self.numberOfEmptyFields - 32)))
+        sorted_vars = np.sort(var_array)
+        if expected_dark_empty <= 0:
+            e_expected = float(sorted_vars[0] - 1e-6)
+        elif expected_dark_empty >= len(sorted_vars):
+            e_expected = float(sorted_vars[-1] + 1e-6)
+        else:
+            e_expected = float((sorted_vars[expected_dark_empty - 1] + sorted_vars[expected_dark_empty]) / 2.0)
+
+        occupied_vars = var_array[var_array >= e_expected]
+        b_expected = self._estimate_black_threshold_from_occupied(
+            occupied_vars,
+            default_value=max(self.black_variance_threshold, e_expected + 1.0),
+        )
+        if b_expected <= e_expected:
+            b_expected = e_expected + 1.0
+
+        board_expected, ov_expected, b_expected_n, w_expected_n = self._build_board_from_thresholds(
+            warped, stats, cell_h, cell_w, e_expected, b_expected
+        )
+        score_expected = self._score_candidate(np.array(board_expected, dtype=np.int32), b_expected_n, w_expected_n)
+        candidates.append(
+            ("expected_empty_split", score_expected, board_expected, ov_expected, b_expected_n, w_expected_n, e_expected, b_expected)
+        )
+
+        if len(candidates) == 0:
+            return None, None, 0, 0, 0.0, 0.0
+
+        selected = min(candidates, key=lambda x: x[1])
+        method_name, _score, board, overlay, black_count, white_count, empty_thr, black_thr = selected
+        self._last_selected_method = method_name
+        self._last_board = np.array(board, dtype=np.int32)
+        return board, overlay, black_count, white_count, float(empty_thr), float(black_thr)
 
     def _get_grid_squares_contours(self):
         contours = []
@@ -427,6 +514,8 @@ class BoardDetector:
         if not hasattr(self, "gameBoardFieldsContours") or self.gameBoardFieldsContours is None:
             self.gameBoardFieldsContours = self._get_grid_squares_contours()
 
+        self.expected_black_left = int(max(0, getattr(game.board, "black_left", 12)))
+        self.expected_white_left = int(max(0, getattr(game.board, "white_left", 12)))
         self.set_number_of_empty_fields(game)
 
         if self.use_old_board_better_runtime:
@@ -451,7 +540,8 @@ class BoardDetector:
             print("BOARD STATE (OLDBOARDBETTER DEFAULT)")
             print("=" * 60)
             print(f"  Detected: Black={black_count}, White={white_count}")
-            print(f"  Adaptive thresholds: Empty<{empty_thr:.1f}<Black<{black_thr:.1f}<White")
+            print(f"  Used thresholds: Empty<{empty_thr:.1f}<Black<{black_thr:.1f}<White")
+            print(f"  Selected classifier: {self._last_selected_method}")
 
             if black_count == 12 and white_count == 12:
                 print("  ? Perfect! Game ready")
