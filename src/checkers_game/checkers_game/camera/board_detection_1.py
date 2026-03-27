@@ -1,5 +1,6 @@
 import argparse
 from collections import Counter
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -45,9 +46,32 @@ class BoardDetector:
         self.white_piece_threshold = 1000.0
 
         self.bounderies = None
+        self.expected_black_left = 12
+        self.expected_white_left = 12
+        self._last_board = None
+        self._last_selected_method = "uninitialized"
+
+        self._load_threshold_profile_if_available()
 
         if self.ximeaCamera is not None:
             self._init()
+
+    def _load_threshold_profile_if_available(self):
+        profile_path = Path(__file__).resolve().parent / "evaluation_output" / "copy_threshold_calibration.json"
+        if not profile_path.exists():
+            return
+        try:
+            with profile_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            self.empty_variance_threshold = float(payload.get("empty_variance_threshold", self.empty_variance_threshold))
+            self.black_variance_threshold = float(payload.get("black_variance_threshold", self.black_variance_threshold))
+            self.white_piece_threshold = float(payload.get("white_piece_threshold", self.white_piece_threshold))
+            print(
+                "Loaded threshold profile into bd1: "
+                f"E<{self.empty_variance_threshold:.2f}<B<{self.black_variance_threshold:.2f}<W({self.white_piece_threshold:.2f})"
+            )
+        except Exception as exc:
+            print(f"Failed to load threshold profile for bd1: {exc}")
 
     def _init(self):
         # 1. Camera Adjustment Phase
