@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_typesupport_fastrtps_c/checkers_msgs/srv/detail/resume_movement__rosidl_typesupport_fastrtps_c.h

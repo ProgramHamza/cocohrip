@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/gripper_srv/rosidl_typesupport_fastrtps_cpp/gripper_srv/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h

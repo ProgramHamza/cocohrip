@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_generator_cpp/checkers_msgs/srv/detail/resume_movement__traits.hpp

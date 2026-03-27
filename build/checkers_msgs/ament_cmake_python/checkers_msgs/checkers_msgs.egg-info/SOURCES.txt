@@ -1,6 +1,0 @@
-setup.py
-checkers_msgs/__init__.py
-checkers_msgs.egg-info/PKG-INFO
-checkers_msgs.egg-info/SOURCES.txt
-checkers_msgs.egg-info/dependency_links.txt
-checkers_msgs.egg-info/top_level.txt

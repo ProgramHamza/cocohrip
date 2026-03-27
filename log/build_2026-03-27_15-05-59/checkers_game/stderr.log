@@ -1,0 +1,5 @@
+  File "/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection.py", line 1305
+    cv2.FONT_HERSHEY_SIMPLEX. 0.7, (0, 0, 0), 3)
+                              ^^^
+SyntaxError: invalid syntax
+

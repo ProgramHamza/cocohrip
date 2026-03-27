@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/gripper_srv/ament_cmake_export_libraries/ament_cmake_export_libraries-extras.cmake

@@ -1,9 +1,0 @@
-/home/marek/amavet_ws/build/ur/CMakeFiles/uninstall.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/ur_uninstall.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/test.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/edit_cache.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/rebuild_cache.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/list_install_components.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/install.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/install/local.dir
-/home/marek/amavet_ws/build/ur/CMakeFiles/install/strip.dir

@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/src/checkers_msgs/msg/RobotMove.msg

@@ -1,4 +1,4 @@
-from checkers_game.constants import BLACK, RED, WHITE, SQUARE_SIZE, GREY, CROWN
+from ..constants import BLACK, RED, WHITE, SQUARE_SIZE, GREY, CROWN
 import pygame
 
 class Piece:
@@ -19,7 +19,6 @@ class Piece:
         self.y = SQUARE_SIZE * self.row + SQUARE_SIZE // 2
 
     def make_king(self):
-        print("Som KING")
         self.king = True
 
     def draw(self, win):

@@ -1,0 +1,160 @@
+[0.857s] Invoking command in '/home/collab/tests/cocohrip/src/src/checkers_game': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/collab/tests/cocohrip/src/build/checkers_game/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/checkers_game build --build-base /home/collab/tests/cocohrip/src/build/checkers_game/build install --record /home/collab/tests/cocohrip/src/build/checkers_game/install.log --single-version-externally-managed install_data
+[1.145s] running egg_info
+[1.145s] creating ../../build/checkers_game/checkers_game.egg-info
+[1.168s] writing ../../build/checkers_game/checkers_game.egg-info/PKG-INFO
+[1.168s] writing dependency_links to ../../build/checkers_game/checkers_game.egg-info/dependency_links.txt
+[1.168s] writing entry points to ../../build/checkers_game/checkers_game.egg-info/entry_points.txt
+[1.168s] writing requirements to ../../build/checkers_game/checkers_game.egg-info/requires.txt
+[1.169s] writing top-level names to ../../build/checkers_game/checkers_game.egg-info/top_level.txt
+[1.169s] writing manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+[1.215s] reading manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+[1.216s] writing manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+[1.216s] running build
+[1.217s] running build_py
+[1.217s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build
+[1.217s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib
+[1.217s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game
+[1.217s] copying checkers_game/constants.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game
+[1.217s] copying checkers_game/checkers_node.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game
+[1.217s] copying checkers_game/desktop_game.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game
+[1.217s] copying checkers_game/__init__.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game
+[1.217s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/offline_grid_detect.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/combo.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/mark_ground_truth_corners.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/ximea_camera.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/offline_pipeline_check.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/board_detection_1.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/old_board_better.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/calibrate_copy_thresholds_from_bd1.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/grid_corner_detector.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/evaluate_old_board_better_success.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.218s] copying checkers_game/camera/board_detection_copy.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/old_board_better copy.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/offline_old_board_better.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/evaluate_corner_accuracy.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/offline_grid_detect_all_videos.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/offline_compare_old_current.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/__init__.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] copying checkers_game/camera/offline_compare_old_current_all_videos.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.219s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/tournament.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/train_alphazero.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/plot_tournament.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/alphazero_mcts.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/algorithm.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/rl_algorithm.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/rl_model.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/train_mixture.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/training.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.220s] copying checkers_game/minimax/alphazero_model.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.221s] copying checkers_game/minimax/eval_vs_minimax.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.221s] copying checkers_game/minimax/__init__.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax
+[1.221s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers
+[1.221s] copying checkers_game/checkers/board.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers
+[1.221s] copying checkers_game/checkers/piece.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers
+[1.221s] copying checkers_game/checkers/game.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers
+[1.221s] copying checkers_game/checkers/__init__.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers
+[1.222s] creating /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/assets
+[1.222s] copying checkers_game/assets/crown.png -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/assets
+[1.222s] running install
+[1.228s] running install_lib
+[1.251s] creating /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game
+[1.251s] creating /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.251s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_grid_detect.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/combo.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/mark_ground_truth_corners.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/ximea_camera.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_pipeline_check.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/board_detection_1.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/old_board_better.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/calibrate_copy_thresholds_from_bd1.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/grid_corner_detector.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/evaluate_old_board_better_success.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.252s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/board_detection_copy.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/old_board_better copy.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_old_board_better.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/evaluate_corner_accuracy.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_grid_detect_all_videos.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_compare_old_current.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/__init__.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/offline_compare_old_current_all_videos.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.253s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/constants.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game
+[1.253s] creating /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/tournament.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/train_alphazero.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/plot_tournament.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/alphazero_mcts.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/algorithm.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/rl_algorithm.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/rl_model.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/train_mixture.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/training.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/alphazero_model.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/eval_vs_minimax.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.254s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/minimax/__init__.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers_node.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game
+[1.255s] creating /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers/board.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers/piece.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers/game.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/checkers/__init__.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/desktop_game.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game
+[1.255s] creating /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/assets
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/assets/crown.png -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/assets
+[1.255s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/__init__.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game
+[1.256s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_grid_detect.py to offline_grid_detect.cpython-312.pyc
+[1.259s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/combo.py to combo.cpython-312.pyc
+[1.264s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/mark_ground_truth_corners.py to mark_ground_truth_corners.cpython-312.pyc
+[1.265s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/ximea_camera.py to ximea_camera.cpython-312.pyc
+[1.265s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_pipeline_check.py to offline_pipeline_check.cpython-312.pyc
+[1.268s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection_1.py to board_detection_1.cpython-312.pyc
+[1.275s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/old_board_better.py to old_board_better.cpython-312.pyc
+[1.279s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/calibrate_copy_thresholds_from_bd1.py to calibrate_copy_thresholds_from_bd1.cpython-312.pyc
+[1.282s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/grid_corner_detector.py to grid_corner_detector.cpython-312.pyc
+[1.291s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/evaluate_old_board_better_success.py to evaluate_old_board_better_success.cpython-312.pyc
+[1.293s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection_copy.py to board_detection_copy.cpython-312.pyc
+[1.302s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/old_board_better copy.py to old_board_better copy.cpython-312.pyc
+[1.305s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_old_board_better.py to offline_old_board_better.cpython-312.pyc
+[1.306s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/evaluate_corner_accuracy.py to evaluate_corner_accuracy.cpython-312.pyc
+[1.308s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection.py to board_detection.cpython-312.pyc
+[1.315s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_grid_detect_all_videos.py to offline_grid_detect_all_videos.cpython-312.pyc
+[1.316s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_compare_old_current.py to offline_compare_old_current.cpython-312.pyc
+[1.317s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/__init__.py to __init__.cpython-312.pyc
+[1.317s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/offline_compare_old_current_all_videos.py to offline_compare_old_current_all_videos.cpython-312.pyc
+[1.320s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/constants.py to constants.cpython-312.pyc
+[1.320s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/tournament.py to tournament.cpython-312.pyc
+[1.324s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/train_alphazero.py to train_alphazero.cpython-312.pyc
+[1.325s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/plot_tournament.py to plot_tournament.cpython-312.pyc
+[1.327s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/alphazero_mcts.py to alphazero_mcts.cpython-312.pyc
+[1.329s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/algorithm.py to algorithm.cpython-312.pyc
+[1.329s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/rl_algorithm.py to rl_algorithm.cpython-312.pyc
+[1.331s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/rl_model.py to rl_model.cpython-312.pyc
+[1.332s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/train_mixture.py to train_mixture.cpython-312.pyc
+[1.334s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/training.py to training.cpython-312.pyc
+[1.335s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/alphazero_model.py to alphazero_model.cpython-312.pyc
+[1.336s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/eval_vs_minimax.py to eval_vs_minimax.cpython-312.pyc
+[1.337s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/minimax/__init__.py to __init__.cpython-312.pyc
+[1.338s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers_node.py to checkers_node.cpython-312.pyc
+[1.342s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers/board.py to board.cpython-312.pyc
+[1.344s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers/piece.py to piece.cpython-312.pyc
+[1.345s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers/game.py to game.cpython-312.pyc
+[1.346s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/checkers/__init__.py to __init__.cpython-312.pyc
+[1.346s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/desktop_game.py to desktop_game.cpython-312.pyc
+[1.347s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/__init__.py to __init__.cpython-312.pyc
+[1.348s] running install_data
+[1.348s] creating /home/collab/tests/cocohrip/src/install/checkers_game/share/ament_index
+[1.348s] creating /home/collab/tests/cocohrip/src/install/checkers_game/share/ament_index/resource_index
+[1.348s] creating /home/collab/tests/cocohrip/src/install/checkers_game/share/ament_index/resource_index/packages
+[1.348s] copying resource/checkers_game -> /home/collab/tests/cocohrip/src/install/checkers_game/share/ament_index/resource_index/packages
+[1.348s] copying package.xml -> /home/collab/tests/cocohrip/src/install/checkers_game/share/checkers_game
+[1.348s] creating /home/collab/tests/cocohrip/src/install/checkers_game/share/checkers_game/launch
+[1.348s] copying launch/checkers_game_launch.launch.py -> /home/collab/tests/cocohrip/src/install/checkers_game/share/checkers_game/launch
+[1.348s] running install_egg_info
+[1.373s] Copying ../../build/checkers_game/checkers_game.egg-info to /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game-0.0.0-py3.12.egg-info
+[1.373s] running install_scripts
+[1.518s] Installing checkers_node script to /home/collab/tests/cocohrip/src/install/checkers_game/lib/checkers_game
+[1.519s] writing list of installed files to '/home/collab/tests/cocohrip/src/build/checkers_game/install.log'
+[1.544s] Invoked command in '/home/collab/tests/cocohrip/src/src/checkers_game' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/collab/tests/cocohrip/src/build/checkers_game/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/checkers_game build --build-base /home/collab/tests/cocohrip/src/build/checkers_game/build install --record /home/collab/tests/cocohrip/src/build/checkers_game/install.log --single-version-externally-managed install_data

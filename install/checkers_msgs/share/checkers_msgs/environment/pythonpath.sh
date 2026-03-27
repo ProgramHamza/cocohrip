@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/ament_cmake_environment_hooks/pythonpath.sh

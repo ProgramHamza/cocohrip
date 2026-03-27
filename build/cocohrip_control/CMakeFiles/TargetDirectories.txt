@@ -1,9 +1,0 @@
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/uninstall.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/cocohrip_control_uninstall.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/test.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/edit_cache.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/rebuild_cache.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/list_install_components.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/install.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/install/local.dir
-/home/marek/amavet_ws/build/cocohrip_control/CMakeFiles/install/strip.dir

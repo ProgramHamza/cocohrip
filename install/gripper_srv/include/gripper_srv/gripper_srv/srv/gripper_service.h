@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/gripper_srv/rosidl_generator_c/gripper_srv/srv/gripper_service.h

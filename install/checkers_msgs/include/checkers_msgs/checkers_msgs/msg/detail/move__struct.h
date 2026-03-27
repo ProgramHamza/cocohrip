@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_generator_c/checkers_msgs/msg/detail/move__struct.h

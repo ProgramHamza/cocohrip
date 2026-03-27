@@ -1,12 +1,11 @@
 import re
 import cv2
 import pygame
-from checkers_game.constants import WIDTH, HEIGHT, SQUARE_SIZE, RED, WHITE, BLACK
-# use package-qualified import so the module is found when the package is installed
-from checkers_game.camera.ximea_camera import XimeaCamera
-from checkers_game.camera.board_detection import BoardDetection
-from checkers_game.checkers.game import Game
-from checkers_game.minimax.algorithm import WHITE, minimax
+from .constants import WIDTH, HEIGHT, SQUARE_SIZE, RED, WHITE, BLACK
+from .camera.ximea_camera import XimeaCamera
+from .camera.board_detection_1 import BoardDetection
+from .checkers.game import Game
+from .minimax.algorithm import WHITE, minimax
 import mediapipe as mp
 import time
 import numpy as np

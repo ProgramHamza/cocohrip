@@ -1,0 +1,27 @@
+running egg_info
+writing ../../build/checkers_game/checkers_game.egg-info/PKG-INFO
+writing dependency_links to ../../build/checkers_game/checkers_game.egg-info/dependency_links.txt
+writing entry points to ../../build/checkers_game/checkers_game.egg-info/entry_points.txt
+writing requirements to ../../build/checkers_game/checkers_game.egg-info/requires.txt
+writing top-level names to ../../build/checkers_game/checkers_game.egg-info/top_level.txt
+reading manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+writing manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+running build
+running build_py
+copying checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+running install
+running install_lib
+copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection.py to board_detection.cpython-312.pyc
+  File "/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection.py", line 1305
+    cv2.FONT_HERSHEY_SIMPLEX. 0.7, (0, 0, 0), 3)
+                              ^^^
+SyntaxError: invalid syntax
+
+running install_data
+running install_egg_info
+removing '/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game-0.0.0-py3.12.egg-info' (and everything under it)
+Copying ../../build/checkers_game/checkers_game.egg-info to /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game-0.0.0-py3.12.egg-info
+running install_scripts
+Installing checkers_node script to /home/collab/tests/cocohrip/src/install/checkers_game/lib/checkers_game
+writing list of installed files to '/home/collab/tests/cocohrip/src/build/checkers_game/install.log'

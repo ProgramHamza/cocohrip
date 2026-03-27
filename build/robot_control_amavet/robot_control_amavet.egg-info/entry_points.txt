@@ -1,2 +1,0 @@
-[console_scripts]
-move_ur5e_node = robot_control_amavet.move_ur5e_node:main

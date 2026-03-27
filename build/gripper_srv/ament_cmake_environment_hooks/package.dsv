@@ -1,4 +1,0 @@
-source;share/gripper_srv/local_setup.bash
-source;share/gripper_srv/local_setup.dsv
-source;share/gripper_srv/local_setup.sh
-source;share/gripper_srv/local_setup.zsh

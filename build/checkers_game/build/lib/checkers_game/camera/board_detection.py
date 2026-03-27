@@ -1,15 +1,22 @@
 import cv2
 from matplotlib.pyplot import imshow
-from checkers_game.camera.ximea_camera import XimeaCamera
+from .ximea_camera import XimeaCamera
+from .grid_corner_detector import GridCornerDetector
+from .old_board_better import OldBoardBetterDetector
 import numpy as np
 import copy
-from checkers_game.checkers.piece import Piece
-from checkers_game.constants import BLACK, ROWS, RED, SQUARE_SIZE, COLS, WHITE, GREY, BROWN
+from ..checkers.piece import Piece
+from ..constants import BLACK, ROWS, RED, SQUARE_SIZE, COLS, WHITE, GREY, BROWN
 
 class BoardDetection:
 
     def __init__(self, ximeaCamera):
         self.ximeaCamera = ximeaCamera
+        self.grid_detector = GridCornerDetector()
+        self.old_board_detector = OldBoardBetterDetector()
+        # Make OldBoardBetter the runtime default in ROS2; keep legacy fallback.
+        self.use_old_board_better_runtime = True
+        self._old_board_runtime_reported = False
         self._init()
         
 
@@ -45,6 +52,7 @@ class BoardDetection:
         
         self.is_initialized = False
         self.selected_difficulty = 3
+        print("Default runtime board detector: OldBoardBetter")
 
     def _auto_detect_corners(self):
         """
@@ -54,8 +62,27 @@ class BoardDetection:
         """
         # Get image
         image = self.ximeaCamera.get_camera_image()
+        return self._auto_detect_corners_from_image(image)
+
+    def _auto_detect_corners_from_image(self, image):
         if image is None:
             return None
+
+        # First try grid-based Hough detection
+        grid_result = self.grid_detector.detect_corners(image)
+        if grid_result is not None:
+            print("  → Grid-based detection succeeded")
+            return self._orient_corners(grid_result.corners, image)
+
+        # Second try old-board-better low-light robust detector
+        old_corners, _old_debug = self.old_board_detector.detect_corners_debug(image)
+        if old_corners is not None:
+            print("  → OldBoardBetter detection succeeded")
+            return self._orient_corners(old_corners, image)
+
+        return self._auto_detect_corners_contour_fallback(image)
+
+    def _auto_detect_corners_contour_fallback(self, image):
         
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
@@ -383,9 +410,49 @@ class BoardDetection:
              self.gameBoardFieldsContours = self._get_grid_squares_contours()
 
         self.set_number_of_empty_fields(game)
-        
-        # Pass [] as emptyFieldsContours since it's unused in _get_board_from_image
+
+        if self.use_old_board_better_runtime:
+            board = self._get_board_with_old_board_better(cameraImage)
+            if board is not None:
+                return board
+
+        # Fallback: previous variance-threshold runtime board extraction
         return self._get_board_from_image(cameraImage, [])
+
+    def _get_board_with_old_board_better(self, warped_board_image):
+        board, debug = self.old_board_detector.classify_warped_board(warped_board_image)
+        if board is None:
+            return None
+
+        overlay = debug.get("overlay")
+        if overlay is not None:
+            cv2.imshow("gameboard", overlay)
+
+        black_count = int(debug.get("black_count", int(np.count_nonzero(board == 2))))
+        white_count = int(debug.get("white_count", int(np.count_nonzero(board == 1))))
+
+        if (not self._old_board_runtime_reported) or (not self.is_initialized and black_count == 12 and white_count == 12):
+            print("\n" + "="*60)
+            print("BOARD STATE (OLDBOARDBETTER DEFAULT)")
+            print("="*60)
+            print(f"  Detected: Black={black_count}, White={white_count}")
+            print(
+                "  Adaptive thresholds: "
+                f"Empty<{debug.get('empty_threshold', 0.0):.1f}"
+                f"<Black<{debug.get('black_threshold', 0.0):.1f}<White"
+            )
+
+            if black_count == 12 and white_count == 12:
+                print("  ✓ Perfect! Game ready")
+                print("  → Press 'S' in any OpenCV window to start the game")
+                self.is_initialized = True
+            else:
+                print("  ⚠ Piece count mismatch - fallback remains available if needed")
+
+            print("="*60 + "\n")
+            self._old_board_runtime_reported = True
+
+        return board.astype(object)
 
     def _get_trim_param_manual(self):
         """
@@ -1194,7 +1261,7 @@ class BoardDetection:
                     board[row][col] = 0
                     position += 1
                     continue
-                
+
                 # Extract square and calculate variance
                 square = blur[y_pad:y_pad+h_pad, x_pad:x_pad+w_pad]
                 
@@ -1233,17 +1300,20 @@ class BoardDetection:
                              (point_x - 12, point_y - text_size[1] - 2), 
                              (point_x + text_size[0] - 8, point_y + 7), 
                              (0, 0, 0), -1)
+                for i in [(point_x, point_y), (point_x+1, point_y+1), (point_x-1, point_y-1)]:
+                    cv2.putText(new_image, label, (i[0]-10, i[1]+5), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 3)
                 cv2.putText(new_image, label, (point_x-10, point_y+5), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                           cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
                 
                 position += 1
         
-        # Add info overlay with background
         text = f"Black: {black_count} | White: {white_count}"
+        # Add info overlay with background
         text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
         cv2.rectangle(new_image, (8, 2), (12 + text_size[0], 29), (0, 0, 0), -1)
         cv2.putText(new_image, text, (10, 25), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
         
         cv2.imshow("gameboard", new_image)
         

@@ -1,6 +1,0 @@
-{
-  "package_name": "gripper_srv",
-  "non_idl_tuples": [
-    "/home/marek/amavet_ws/src/RobotiqHandeROS2Driver-main/RobotiqHandeROS2Driver-main/gripper_srv:srv/GripperService.srv"
-  ]
-}

@@ -1,1 +1,0 @@
-joint_state_broadcaster;joint_trajectory_controller;position_controllers;robot_state_publisher;cocohrip_description;ur_controllers;ur_robot_driver;ur_client_library;xacro;controller_manager

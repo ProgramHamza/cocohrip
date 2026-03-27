@@ -1,1 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_typesupport_introspection_c/checkers_msgs/msg/rosidl_typesupport_introspection_c__visibility_control.h

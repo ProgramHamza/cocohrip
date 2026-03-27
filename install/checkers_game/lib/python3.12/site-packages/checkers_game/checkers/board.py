@@ -4,7 +4,7 @@ import re
 from tkinter import NO, W
 from matplotlib.pyplot import pie
 import pygame
-from checkers_game.constants import BLACK, ROWS, SQUARE_SIZE, COLS, WHITE, GREY, BROWN, BLUE
+from ..constants import BLACK, ROWS, SQUARE_SIZE, COLS, WHITE, GREY, BROWN, BLUE
 from .piece import Piece
 
 class Board:

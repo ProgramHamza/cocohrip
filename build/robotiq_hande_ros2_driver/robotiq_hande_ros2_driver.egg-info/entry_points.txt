@@ -1,3 +1,0 @@
-[console_scripts]
-gripper_node = robotiq_hande_ros2_driver.gripper_node:main
-test = robotiq_hande_ros2_driver.test:main

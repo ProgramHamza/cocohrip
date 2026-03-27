@@ -40,8 +40,8 @@ class BoardDetection:
         # doesn't know where pieces are.
         # Instead, we set defaults and let user verify in the placement window.
         self.empty_variance_threshold = 15.0
-        self.black_variance_threshold = 1000.0
-        self.white_piece_threshold = 1000.0 # Anything above black
+        self.black_variance_threshold = 500.0
+        self.white_piece_threshold = 500.0 # Anything above black
         
         self._piece_placement_window()
 
@@ -1248,8 +1248,16 @@ class BoardDetection:
                     
                 # Get square region
                 x, y, w_rect, h_rect = gameBoardFieldsContours
+
+                # Non-playable (light) squares — skip detection, mark as empty
+                if (row + col) % 2 == 1:
+                    board[row][col] = 0
+                    # Draw light square indicator
+                    cv2.rectangle(new_image, (x, y), (x + w_rect, y + h_rect), (80, 80, 80), 1)
+                    position += 1
+                    continue
                 
-                # Add padding
+                # Add padding for playable (dark) squares
                 padding = 10
                 x_pad = x + padding
                 y_pad = y + padding
@@ -1261,7 +1269,7 @@ class BoardDetection:
                     board[row][col] = 0
                     position += 1
                     continue
-                
+
                 # Extract square and calculate variance
                 square = blur[y_pad:y_pad+h_pad, x_pad:x_pad+w_pad]
                 
@@ -1276,41 +1284,59 @@ class BoardDetection:
                 if variance < self.empty_variance_threshold:
                     # Empty
                     board[row][col] = 0
-                    color = (0, 255, 255)  # Yellow
-                    label = str(position)
+                    color = (0, 255, 0)  # Green
+                    label = "E"
                 elif variance < self.black_variance_threshold:
                     # Black piece
                     board[row][col] = 2
                     black_count += 1
                     color = (255, 0, 255)  # Magenta
-                    label = str(position)
+                    label = "B"
                 else:
                     # White piece
                     board[row][col] = 1
                     white_count += 1
                     color = (0, 255, 255)  # Cyan
-                    label = str(position)
+                    label = "W"
                 
-                # Draw on image with background for readability
-                point_x = x + w_rect // 2
-                point_y = y + h_rect // 2
-                
-                text_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                cv2.rectangle(new_image, 
-                             (point_x - 12, point_y - text_size[1] - 2), 
-                             (point_x + text_size[0] - 8, point_y + 7), 
+                # Draw classification label centered in the square
+                cx = x + w_rect // 2
+                cy = y + h_rect // 2
+
+                # Draw square border
+                cv2.rectangle(new_image, (x, y), (x + w_rect, y + h_rect), color, 2)
+
+                # Draw label (E/B/W) with black background centered in square
+                label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)[0]
+                lx = cx - label_size[0] // 2
+                ly = cy + label_size[1] // 2
+                cv2.rectangle(new_image,
+                             (lx - 3, ly - label_size[1] - 3),
+                             (lx + label_size[0] + 3, ly + 3),
                              (0, 0, 0), -1)
-                cv2.putText(new_image, label, (point_x-10, point_y+5), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                cv2.putText(new_image, label, (lx, ly),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+                # Draw variance value below the label
+                var_text = f"{int(variance)}"
+                var_size = cv2.getTextSize(var_text, cv2.FONT_HERSHEY_SIMPLEX, 0.35, 1)[0]
+                vx = cx - var_size[0] // 2
+                vy = ly + var_size[1] + 8
+                cv2.rectangle(new_image,
+                             (vx - 2, vy - var_size[1] - 2),
+                             (vx + var_size[0] + 2, vy + 2),
+                             (0, 0, 0), -1)
+                cv2.putText(new_image, var_text, (vx, vy),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
                 
                 position += 1
         
-        # Add info overlay with background
         text = f"Black: {black_count} | White: {white_count}"
+        # Add info overlay with background
         text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
         cv2.rectangle(new_image, (8, 2), (12 + text_size[0], 29), (0, 0, 0), -1)
         cv2.putText(new_image, text, (10, 25), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 255), 2)
         
         cv2.imshow("gameboard", new_image)
         

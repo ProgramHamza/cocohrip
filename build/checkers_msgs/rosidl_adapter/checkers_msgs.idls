@@ -1,6 +1,0 @@
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:msg/Board.idl
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:msg/Piece.idl
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:msg/Move.idl
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:msg/HandDetected.idl
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:msg/RobotMove.idl
-/home/marek/amavet_ws/build/checkers_msgs/rosidl_adapter/checkers_msgs:srv/ResumeMovement.idl

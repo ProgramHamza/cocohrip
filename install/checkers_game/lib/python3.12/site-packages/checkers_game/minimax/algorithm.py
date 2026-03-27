@@ -1,6 +1,6 @@
 from copy import deepcopy
 import pygame
-from checkers_game.constants import BLACK, WHITE
+from ..constants import BLACK, WHITE
 
 
 def minimax(board, depth, max_player, game):
@@ -11,6 +11,8 @@ def minimax(board, depth, max_player, game):
         maxEval = float('-inf')
         best_move = None
         best_piece = None
+        best_board = board
+        best_removed = []
         for new_board, move, piece, removed in get_all_moves(board, BLACK, game):
             evaluation = minimax(new_board, depth-1, False, game)[0]
             maxEval = max(maxEval, evaluation)
@@ -20,11 +22,14 @@ def minimax(board, depth, max_player, game):
                 best_board = new_board
                 best_removed = removed
 
+        # if no moves were available, return current board state
         return maxEval, best_board, best_move, best_piece, best_removed
     else:
         minEval = float('inf')
         best_move = None
         best_piece = None
+        best_board = board
+        best_removed = []
         for new_board, move, piece, removed in get_all_moves(board, WHITE, game):
             evaluation = minimax(new_board, depth-1, True, game)[0]
             minEval = min(minEval, evaluation)

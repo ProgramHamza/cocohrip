@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/marek/amavet_ws/build/gripper_srv/rosidl_generator_py/gripper_srv/gripper_srv_s__rosidl_typesupport_c.so" "TARGETS" "gripper_srv_s__rosidl_typesupport_c" "DESTINATION" "lib/python3.12/site-packages/gripper_srv")

@@ -1,2 +1,0 @@
-[console_scripts]
-checkers_node = checkers_game_tutorial.checkers_node:main

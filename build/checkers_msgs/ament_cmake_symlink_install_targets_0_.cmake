@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/marek/amavet_ws/build/checkers_msgs/rosidl_generator_py/checkers_msgs/checkers_msgs_s__rosidl_typesupport_fastrtps_c.so" "TARGETS" "checkers_msgs_s__rosidl_typesupport_fastrtps_c" "DESTINATION" "lib/python3.12/site-packages/checkers_msgs")

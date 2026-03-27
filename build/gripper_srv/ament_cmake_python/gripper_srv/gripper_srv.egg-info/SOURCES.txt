@@ -1,6 +1,0 @@
-setup.py
-gripper_srv/__init__.py
-gripper_srv.egg-info/PKG-INFO
-gripper_srv.egg-info/SOURCES.txt
-gripper_srv.egg-info/dependency_links.txt
-gripper_srv.egg-info/top_level.txt

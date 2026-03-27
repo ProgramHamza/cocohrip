@@ -1,0 +1,24 @@
+[0.839s] Invoking command in '/home/collab/tests/cocohrip/src/src/checkers_game': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/collab/tests/cocohrip/src/build/checkers_game/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/checkers_game build --build-base /home/collab/tests/cocohrip/src/build/checkers_game/build install --record /home/collab/tests/cocohrip/src/build/checkers_game/install.log --single-version-externally-managed install_data
+[1.125s] running egg_info
+[1.148s] writing ../../build/checkers_game/checkers_game.egg-info/PKG-INFO
+[1.148s] writing dependency_links to ../../build/checkers_game/checkers_game.egg-info/dependency_links.txt
+[1.149s] writing entry points to ../../build/checkers_game/checkers_game.egg-info/entry_points.txt
+[1.149s] writing requirements to ../../build/checkers_game/checkers_game.egg-info/requires.txt
+[1.149s] writing top-level names to ../../build/checkers_game/checkers_game.egg-info/top_level.txt
+[1.196s] reading manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+[1.197s] writing manifest file '../../build/checkers_game/checkers_game.egg-info/SOURCES.txt'
+[1.197s] running build
+[1.197s] running build_py
+[1.198s] copying checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera
+[1.199s] running install
+[1.205s] running install_lib
+[1.228s] copying /home/collab/tests/cocohrip/src/build/checkers_game/build/lib/checkers_game/camera/board_detection.py -> /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera
+[1.229s] byte-compiling /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game/camera/board_detection.py to board_detection.cpython-312.pyc
+[1.238s] running install_data
+[1.238s] running install_egg_info
+[1.262s] removing '/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game-0.0.0-py3.12.egg-info' (and everything under it)
+[1.262s] Copying ../../build/checkers_game/checkers_game.egg-info to /home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages/checkers_game-0.0.0-py3.12.egg-info
+[1.263s] running install_scripts
+[1.406s] Installing checkers_node script to /home/collab/tests/cocohrip/src/install/checkers_game/lib/checkers_game
+[1.407s] writing list of installed files to '/home/collab/tests/cocohrip/src/build/checkers_game/install.log'
+[1.434s] Invoked command in '/home/collab/tests/cocohrip/src/src/checkers_game' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/collab/tests/cocohrip/src/build/checkers_game/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/collab/tests/cocohrip/src/install/checkers_game/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/checkers_game build --build-base /home/collab/tests/cocohrip/src/build/checkers_game/build install --record /home/collab/tests/cocohrip/src/build/checkers_game/install.log --single-version-externally-managed install_data

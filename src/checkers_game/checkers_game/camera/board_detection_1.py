@@ -113,12 +113,24 @@ class BoardDetector:
         if image is None:
             return None
 
-        # Copy-pipeline corner strategy: rely on OldBoardBetter only.
-        # This keeps bd1 geometry behavior consistent with board_detection_copy.
+        # 1. Try grid-based Hough detection
+        grid_result = self.grid_detector.detect_corners(image)
+        if grid_result is not None:
+            print("  → Grid-based detection succeeded")
+            return self._orient_corners(grid_result.corners, image)
+
+        # 2. Try OldBoardBetter low-light robust detector
         old_corners, _old_debug = self.old_board_detector.detect_corners_debug(image)
         if old_corners is not None:
-            print("  -> Copy-style OldBoardBetter detection succeeded")
-            return old_corners
+            print("  → OldBoardBetter detection succeeded")
+            return self._orient_corners(old_corners, image)
+
+        # 3. Contour-based fallback
+        fallback = self._auto_detect_corners_contour_fallback(image)
+        if fallback is not None:
+            print("  → Contour fallback detection succeeded")
+            return fallback
+
         return None
 
     def _auto_detect_corners_contour_fallback(self, image):
@@ -314,9 +326,6 @@ class BoardDetector:
         stats = []
         for row in range(8):
             for col in range(8):
-                if (row + col) % 2 == 0:
-                    continue
-
                 y1 = row * cell_h + margin
                 y2 = (row + 1) * cell_h - margin
                 x1 = col * cell_w + margin
@@ -360,6 +369,7 @@ class BoardDetector:
                 white_count += 1
 
         overlay = warped.copy()
+        position = 0
         for row in range(8):
             for col in range(8):
                 x1 = col * cell_w
@@ -367,18 +377,63 @@ class BoardDetector:
                 x2 = x1 + cell_w
                 y2 = y1 + cell_h
 
-                if (row + col) % 2 == 0:
-                    cv2.rectangle(overlay, (x1, y1), (x2, y2), (70, 70, 70), 1)
-                    continue
-
                 value = int(board[row, col])
                 if value == 0:
                     color = (0, 255, 0)
+                    label = "E"
                 elif value == 2:
                     color = (255, 0, 255)
+                    label = "B"
                 else:
                     color = (0, 255, 255)
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 2)
+                    label = "W"
+
+                # Dim border for light squares, thicker for dark
+                if (row + col) % 2 == 0:
+                    cv2.rectangle(overlay, (x1, y1), (x2, y2), (70, 70, 70), 1)
+                else:
+                    cv2.rectangle(overlay, (x1, y1), (x2, y2), color, 2)
+
+                # Draw position number centered in the square
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+                pos_text = str(position)
+                pos_size = cv2.getTextSize(pos_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                px = cx - pos_size[0] // 2
+                py = cy - 5
+                cv2.rectangle(overlay,
+                             (px - 2, py - pos_size[1] - 2),
+                             (px + pos_size[0] + 2, py + 2),
+                             (0, 0, 0), -1)
+                cv2.putText(overlay, pos_text, (px, py),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+                # Draw label (E/B/W) below position number
+                label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+                lx = cx - label_size[0] // 2
+                ly = cy + label_size[1] + 10
+                cv2.rectangle(overlay,
+                             (lx - 3, ly - label_size[1] - 3),
+                             (lx + label_size[0] + 3, ly + 3),
+                             (0, 0, 0), -1)
+                cv2.putText(overlay, label, (lx, ly),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+                # Draw variance value at top of square
+                var_val = [v for r, c, v in stats if r == row and c == col]
+                if var_val:
+                    var_text = f"{int(var_val[0])}"
+                    var_size = cv2.getTextSize(var_text, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)[0]
+                    vx = cx - var_size[0] // 2
+                    vy = y1 + var_size[1] + 5
+                    cv2.rectangle(overlay,
+                                 (vx - 2, vy - var_size[1] - 2),
+                                 (vx + var_size[0] + 2, vy + 2),
+                                 (0, 0, 0), -1)
+                    cv2.putText(overlay, var_text, (vx, vy),
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1)
+
+                position += 1
 
         return board.astype(object), overlay, int(black_count), int(white_count)
 

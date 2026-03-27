@@ -1,8 +1,8 @@
 from tkinter import NO
 import pygame
-from checkers_game.checkers.board import Board
-from checkers_game.constants import BLACK, RED, SQUARE_SIZE, WHITE, BLUE
-from checkers_game.minimax.algorithm import WHITE, minimax
+from .board import Board
+from ..constants import BLACK, RED, SQUARE_SIZE, WHITE, BLUE
+from ..minimax.algorithm import WHITE, minimax
 from copy import deepcopy
 
 class Game:
